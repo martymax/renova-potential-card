@@ -56,6 +56,27 @@ Heslo je shodné s uživatelským jménem.
 | Backend | Node 22 · Express · TypeScript (tsx) · souborové úložiště za repository rozhraním |
 | Design | **Simon Says** design systém — viz `.claude/skills/simon-says-ui/` |
 
+## Nasazení (Railway / Docker)
+
+Aplikace se nasazuje jako **jedna služba** — backend obsluhuje i sestavený
+frontend. V repozitáři je `Dockerfile`, který:
+
+1. nainstaluje závislosti `web` i `server` **včetně** devDependencies (kvůli
+   `tsc`/`vite`, které hostingové platformy v produkčním npm módu vynechávají),
+2. sestaví frontend (`web/dist`) a zkompiluje backend (`server/dist`),
+3. spustí čisté Node: `node server/dist/index.js`.
+
+Server čte port z `PORT` (Railway ho předá automaticky) a v produkci servíruje
+`web/dist` + SPA fallback; `/api` a `/uploads` zůstávají na backendu.
+
+```bash
+# lokální produkční ověření bez Dockeru
+npm run install:all && npm run build && npm start
+```
+
+> Na Railway stačí mít v repu `Dockerfile` — platforma ho použije místo
+> automatické detekce a build proběhne deterministicky.
+
 ## Co aplikace umí (mapováno na zadání)
 
 - **Přihlášení a role** — obchodník / obchodní ředitel / admin (§4)

@@ -3,6 +3,9 @@
 
 import express from "express";
 import cors from "cors";
+import { existsSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { initStore, persist, UPLOAD_DIR } from "./lib/store.js";
 import { seed } from "./lib/seed.js";
 import { seedDemoCards } from "./lib/demo.js";
@@ -31,6 +34,19 @@ app.use("/api/uploads", uploadsRouter);
 app.use("/api", adminRouter); // /api/segments, /api/codebooks, /api/mappings, /api/settings, /api/users
 
 app.use("/uploads", express.static(UPLOAD_DIR));
+
+// Produkční režim: backend obsluhuje i sestavený frontend (jedna služba).
+// dist/index.js → ../../web/dist; v devu jede frontend přes Vite (:5173).
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const webDist = join(__dirname, "..", "..", "web", "dist");
+if (existsSync(webDist)) {
+  app.use(express.static(webDist));
+  // SPA fallback pro všechny ne-API a ne-upload cesty.
+  app.get(/^(?!\/api|\/uploads).*/, (_req, res) => {
+    res.sendFile(join(webDist, "index.html"));
+  });
+  console.log(`Servíruji frontend z ${webDist}`);
+}
 
 // Jednotné chybové hlášení
 app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
