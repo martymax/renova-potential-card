@@ -10,3 +10,4 @@ server/data/uploads/
 *.local
 coverage/
 .vite/
+*.tsbuildinfo

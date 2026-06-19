@@ -25,7 +25,7 @@ Vite ho proxuje přes `/api`.
 
 ### Demo přístupy
 
-Heslo je shodné s uživatelským jménem.
+Mimo produkci (a v produkci jen s `KP_DEMO_MODE=true`) je heslo shodné s uživatelským jménem.
 
 | Účet | Role | Co vidí |
 |---|---|---|
@@ -33,6 +33,13 @@ Heslo je shodné s uživatelským jménem.
 | `novak` | Obchodník | druhý obchodník (pro reporting napříč týmem) |
 | `reditel` | Obchodní ředitel | reporting, kvalita dat, tendry, terénní aktivita, CSV |
 | `admin` | Admin | číselníky, mapování na Raynet, GPS a systémová pravidla |
+
+**Hesla a produkce:** hesla se ukládají jen jako scrypt hash, nikdy plaintext.
+V produkci (`NODE_ENV=production`) **nevzniká** výchozí účet `admin/admin`:
+
+- `KP_PASSWORD_ADMIN`, `KP_PASSWORD_REDITEL`, … nastaví konkrétní heslo daného účtu;
+- `KP_DEMO_MODE=true` povolí demo hesla (= jméno) i v produkci (jen pro ukázku);
+- jinak se každému účtu vygeneruje náhodné heslo a jednou vypíše do logu při startu.
 
 ## Architektura
 

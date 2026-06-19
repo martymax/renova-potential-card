@@ -33,7 +33,11 @@ app.use("/api/reports", reportsRouter);
 app.use("/api/uploads", uploadsRouter);
 app.use("/api", adminRouter); // /api/segments, /api/codebooks, /api/mappings, /api/settings, /api/users
 
-app.use("/uploads", express.static(UPLOAD_DIR));
+// Nahrané přílohy. nosniff brání MIME sniffingu (obrázek se nikdy nevyhodnotí
+// jako HTML/skript); přípona je navíc omezena na obrázkové typy při uploadu.
+app.use("/uploads", express.static(UPLOAD_DIR, {
+  setHeaders: (res) => res.setHeader("X-Content-Type-Options", "nosniff"),
+}));
 
 // Produkční režim: backend obsluhuje i sestavený frontend (jedna služba).
 // dist/index.js → ../../web/dist; v devu jede frontend přes Vite (:5173).

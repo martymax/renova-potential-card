@@ -5,17 +5,21 @@ import { getSegment } from "../lib/segments.js";
 import { raynetGetCompany, raynetWriteback } from "../lib/raynet.js";
 import { remoteResult, verifyViaBrowser, verifyViaLogbookie } from "../lib/gps.js";
 import { diffAudit, hardErrors, recompute, selectWriteback } from "../lib/cards.js";
-import type { AcquisitionMethod, Card, GpsResult } from "../types.js";
+import type { AcquisitionMethod, Card, GpsResult, User } from "../types.js";
 
 export const cardsRouter = Router();
 cardsRouter.use(authMiddleware);
 
-function visibleCards(req: AuthedRequest): Card[] {
-  const db = getDb();
-  if (req.user!.role === "obchodnik") {
-    return db.cards.filter((c) => c.createdBy === req.user!.id || c.updatedBy === req.user!.id);
+/** Smí daný uživatel kartu vidět/upravovat? Obchodník jen vlastní karty. */
+function canAccessCard(user: User, card: Card): boolean {
+  if (user.role === "obchodnik") {
+    return card.createdBy === user.id || card.updatedBy === user.id;
   }
-  return db.cards;
+  return true;
+}
+
+function visibleCards(req: AuthedRequest): Card[] {
+  return getDb().cards.filter((c) => canAccessCard(req.user!, c));
 }
 
 function isStale(card: Card): boolean {
@@ -143,7 +147,7 @@ function computeGps(
 cardsRouter.put("/:id", (req: AuthedRequest, res) => {
   const db = getDb();
   const card = db.cards.find((c) => c.id === req.params.id);
-  if (!card) {
+  if (!card || !canAccessCard(req.user!, card)) {
     res.status(404).json({ error: "Karta nebyla nalezena." });
     return;
   }
@@ -207,7 +211,7 @@ cardsRouter.put("/:id", (req: AuthedRequest, res) => {
 cardsRouter.post("/:id/sync", (req: AuthedRequest, res) => {
   const db = getDb();
   const card = db.cards.find((c) => c.id === req.params.id);
-  if (!card) {
+  if (!card || !canAccessCard(req.user!, card)) {
     res.status(404).json({ error: "Karta nebyla nalezena." });
     return;
   }

@@ -1,9 +1,29 @@
 // Počáteční data: uživatelé (synchronizovaní z Raynetu), číselníky,
 // mapování polí na Raynet a systémová nastavení.
 
+import { randomBytes } from "node:crypto";
 import { genId } from "./store.js";
+import { hashPassword } from "./password.js";
 import { SEGMENTS } from "./segments.js";
 import type { CodebookItem, DbShape, FieldMapping } from "../types.js";
+
+/**
+ * Heslo uživatele: 1) z env (KP_PASSWORD_<JMENO>), 2) demo (= jméno) jen mimo
+ * produkci nebo když je KP_DEMO_MODE=true, 3) jinak náhodné a jednou vypsané do
+ * logu. V produkci tedy nikdy nevznikne výchozí účet admin/admin.
+ */
+function resolvePassword(username: string): string {
+  const envKey = `KP_PASSWORD_${username.toUpperCase()}`;
+  const fromEnv = process.env[envKey];
+  if (fromEnv) return fromEnv;
+
+  const demoAllowed = process.env.NODE_ENV !== "production" || process.env.KP_DEMO_MODE === "true";
+  if (demoAllowed) return username;
+
+  const generated = randomBytes(9).toString("base64url");
+  console.warn(`[seed] ${envKey} není nastaveno — vygenerováno dočasné heslo pro „${username}": ${generated}`);
+  return generated;
+}
 
 function items(labels: string[]): CodebookItem[] {
   return labels.map((label) => ({ id: genId("cb_"), label, active: true }));
@@ -67,10 +87,10 @@ export function seed(): DbShape {
   }
 
   const users = [
-    { id: genId("u_"), username: "obchodnik", password: "obchodnik", name: "Karel Obchodník", role: "obchodnik" as const, raynetUserId: 501, vehicleId: "1AB-2345" },
-    { id: genId("u_"), username: "novak", password: "novak", name: "Jiří Novák", role: "obchodnik" as const, raynetUserId: 502, vehicleId: "2CD-6789" },
-    { id: genId("u_"), username: "reditel", password: "reditel", name: "Petra Ředitelová", role: "reditel" as const, raynetUserId: 401 },
-    { id: genId("u_"), username: "admin", password: "admin", name: "Admin Simon Says", role: "admin" as const, raynetUserId: 301 },
+    { id: genId("u_"), username: "obchodnik", passwordHash: hashPassword(resolvePassword("obchodnik")), name: "Karel Obchodník", role: "obchodnik" as const, raynetUserId: 501, vehicleId: "1AB-2345" },
+    { id: genId("u_"), username: "novak", passwordHash: hashPassword(resolvePassword("novak")), name: "Jiří Novák", role: "obchodnik" as const, raynetUserId: 502, vehicleId: "2CD-6789" },
+    { id: genId("u_"), username: "reditel", passwordHash: hashPassword(resolvePassword("reditel")), name: "Petra Ředitelová", role: "reditel" as const, raynetUserId: 401 },
+    { id: genId("u_"), username: "admin", passwordHash: hashPassword(resolvePassword("admin")), name: "Admin Simon Says", role: "admin" as const, raynetUserId: 301 },
   ];
 
   return {

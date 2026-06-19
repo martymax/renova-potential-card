@@ -4,13 +4,18 @@
 import { randomBytes } from "node:crypto";
 import type { NextFunction, Request, Response } from "express";
 import { getDb } from "./store.js";
+import { hashPassword, verifyPassword } from "./password.js";
 import type { Role, User } from "../types.js";
 
 const sessions = new Map<string, string>(); // token → userId
 
+// Fiktivní hash pro vyrovnání času i u neexistujícího uživatele (proti enumeraci).
+const DUMMY_HASH = hashPassword(randomBytes(16).toString("hex"));
+
 export function login(username: string, password: string): { token: string; user: PublicUser } | null {
-  const user = getDb().users.find((u) => u.username === username && u.password === password);
-  if (!user) return null;
+  const user = getDb().users.find((u) => u.username === username);
+  const ok = verifyPassword(password, user ? user.passwordHash : DUMMY_HASH);
+  if (!user || !ok) return null;
   const token = randomBytes(24).toString("hex");
   sessions.set(token, user.id);
   return { token, user: toPublic(user) };

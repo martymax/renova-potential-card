@@ -5,7 +5,7 @@ export type Role = "obchodnik" | "reditel" | "admin";
 export interface User {
   id: string;
   username: string;
-  password: string; // demo only — v produkci hash + Raynet/SSO
+  passwordHash: string; // scrypt hash — nikdy plaintext
   name: string;
   role: Role;
   raynetUserId: number;

@@ -159,6 +159,9 @@ reportsRouter.get("/export.csv", (_req, res) => {
 });
 
 function csvCell(v: string): string {
-  if (/[;"\n]/.test(v)) return `"${v.replace(/"/g, '""')}"`;
-  return v;
+  // Ochrana proti CSV/formula injection: hodnoty začínající =,+,-,@ (a řídicími
+  // znaky) by tabulkové editory vyhodnotily jako vzorec. Předřadíme apostrof.
+  let s = /^[=+\-@\t\r]/.test(v) ? `'${v}` : v;
+  if (/[;"\n]/.test(s)) s = `"${s.replace(/"/g, '""')}"`;
+  return s;
 }
