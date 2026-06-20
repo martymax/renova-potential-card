@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  server:
+    name: Backend (typecheck · build · testy)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+      - name: Instalace závislostí
+        run: npm ci
+        working-directory: server
+      - name: Typecheck
+        run: npm run typecheck
+        working-directory: server
+      - name: Build (tsc)
+        run: npm run build
+        working-directory: server
+      - name: Testy
+        run: npm test
+        working-directory: server
+
+  web:
+    name: Frontend (typecheck · build · audit design systému)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Instalace závislostí
+        run: npm ci
+        working-directory: web
+      - name: Typecheck
+        run: npm run typecheck
+        working-directory: web
+      - name: Build (vite)
+        run: npm run build
+        working-directory: web
+      - name: Audit design systému Simon Says
+        run: node tools/check-design-system.mjs web/src

@@ -158,7 +158,7 @@ reportsRouter.get("/export.csv", (_req, res) => {
   res.send("﻿" + lines.join("\n")); // BOM kvůli Excelu a diakritice
 });
 
-function csvCell(v: string): string {
+export function csvCell(v: string): string {
   // Ochrana proti CSV/formula injection: hodnoty začínající =,+,-,@ (a řídicími
   // znaky) by tabulkové editory vyhodnotily jako vzorec. Předřadíme apostrof.
   let s = /^[=+\-@\t\r]/.test(v) ? `'${v}` : v;

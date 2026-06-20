@@ -130,8 +130,17 @@ npm run install:all && npm run build && npm start
 ```bash
 npm run check:ds                  # audit Simon Says (barvy = tvrdá hranice)
 npm --prefix server run typecheck # typecheck backendu
+npm --prefix server test          # integrační + jednotkové testy backendu
 npm --prefix web run build        # typecheck + produkční build frontendu
 ```
+
+Testy backendu běží na vestavěném runneru (`node --test` přes tsx, bez dalších
+závislostí) a pokrývají přihlášení, tvrdou validaci a podmíněné SVJ pravidlo,
+quality flags, GPS ověření, kontrolu vlastnictví karty (IDOR), role, omezení
+nahrávání souborů, write-back a ochranu CSV exportu.
+
+CI (GitHub Actions, `.github/workflows/ci.yml`) na každém PR staví a typecheckuje
+backend i frontend, pouští testy backendu a audit design systému.
 
 ## Co není součástí (dle §3.2)
 

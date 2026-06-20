@@ -8,8 +8,8 @@ import { fileURLToPath } from "node:url";
 import type { DbShape } from "../types.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-// src/lib → ../../data = server/data
-const DATA_DIR = join(__dirname, "..", "..", "data");
+// src/lib → ../../data = server/data; testy/produkce mohou přepsat přes KP_DATA_DIR
+const DATA_DIR = process.env.KP_DATA_DIR ?? join(__dirname, "..", "..", "data");
 const DB_PATH = join(DATA_DIR, "db.json");
 export const UPLOAD_DIR = join(DATA_DIR, "uploads");
 
