@@ -149,6 +149,18 @@ test("obchodník nesmí číst/měnit/synchronizovat cizí kartu (404)", async (
   assert.equal((await req("GET", `/api/cards/${foreign.id}`, { token: owner })).status, 200);
 });
 
+test("otevření cizí karty přes POST /cards neodhalí data (403)", async () => {
+  const owner = await tokenFor("obchodnik");
+  // Karel vlastní demo kartu firmy 1001 (vodárny)
+  const mine = await req("POST", "/api/cards", { token: owner, body: { raynetCompanyId: 1001, segment: "vodarny" } });
+  assert.equal(mine.status, 200);
+
+  const other = await tokenFor("novak");
+  const foreign = await req("POST", "/api/cards", { token: other, body: { raynetCompanyId: 1001, segment: "vodarny" } });
+  assert.equal(foreign.status, 403);
+  assert.equal(foreign.data.card, undefined);
+});
+
 // ---------- Role-based access ----------
 
 test("reporting jen pro ředitele/admina, mapování jen pro admina", async () => {
@@ -176,6 +188,14 @@ test("upload: HTML s image MIME se uloží jako obrázek, neobrázek je odmítnu
   txt.append("file", new Blob(["ahoj"], { type: "text/plain" }), "x.txt");
   const rej = await req("POST", "/api/uploads", { token, body: txt });
   assert.equal(rej.status, 400);
+
+  // Stažení nahraného souboru vyžaduje přihlášení.
+  const png = new FormData();
+  png.append("file", new Blob([Buffer.from([0x89, 0x50, 0x4e, 0x47])], { type: "image/png" }), "m.png");
+  const ok = await req("POST", "/api/uploads", { token, body: png });
+  const fileUrl = ok.data.file.url as string;
+  assert.equal((await fetch(base + fileUrl)).status, 401); // bez tokenu
+  assert.equal((await fetch(base + fileUrl, { headers: { authorization: `Bearer ${token}` } })).status, 200);
 });
 
 // ---------- Write-back ----------
@@ -195,6 +215,20 @@ test("synchronizace zapíše skórovaná pole do Raynetu", async () => {
 });
 
 // ---------- CSV injection (jednotkový) ----------
+
+test("CSV export má popsané sloupce a shodný počet sloupců v hlavičce i řádcích", async () => {
+  const reditel = await tokenFor("reditel");
+  const res = await fetch(base + "/api/reports/export.csv", { headers: { authorization: `Bearer ${reditel}` } });
+  assert.equal(res.status, 200);
+  const text = (await res.text()).replace(/^﻿/, "");
+  const rows = text.split("\n").filter(Boolean);
+  // hrubý počet sloupců přes počet oddělovačů (žádné pole demo dat neobsahuje ;)
+  const cols = (line: string) => line.split(";").length;
+  const headerCols = cols(rows[0]);
+  assert.ok(headerCols > 9, "hlavička musí obsahovat i reportovatelné sloupce");
+  assert.ok(rows[0].includes("Počet odběrných míst"));
+  for (const r of rows.slice(1)) assert.equal(cols(r), headerCols);
+});
 
 test("csvCell neutralizuje vzorce a escapuje oddělovače", () => {
   assert.equal(csvCell("=HYPERLINK(x)"), "'=HYPERLINK(x)");

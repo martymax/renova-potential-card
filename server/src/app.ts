@@ -6,6 +6,7 @@ import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { UPLOAD_DIR } from "./lib/store.js";
+import { authMiddleware } from "./lib/auth.js";
 import { authRouter } from "./routes/auth.js";
 import { raynetRouter } from "./routes/raynet.js";
 import { cardsRouter } from "./routes/cards.js";
@@ -29,9 +30,9 @@ export function createApp(): express.Express {
   app.use("/api/uploads", uploadsRouter);
   app.use("/api", adminRouter); // /api/segments, /api/codebooks, /api/mappings, /api/settings, /api/users
 
-  // Nahrané přílohy. nosniff brání MIME sniffingu (obrázek se nikdy nevyhodnotí
-  // jako HTML/skript); přípona je navíc omezena na obrázkové typy při uploadu.
-  app.use("/uploads", express.static(UPLOAD_DIR, {
+  // Nahrané přílohy jen pro přihlášené (fotky měřidel patří k chráněným kartám).
+  // nosniff brání MIME sniffingu; přípona je omezena na obrázkové typy při uploadu.
+  app.use("/uploads", authMiddleware, express.static(UPLOAD_DIR, {
     setHeaders: (res) => res.setHeader("X-Content-Type-Options", "nosniff"),
   }));
 

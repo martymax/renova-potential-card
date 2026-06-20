@@ -75,6 +75,11 @@ cardsRouter.post("/", (req: AuthedRequest, res) => {
   const db = getDb();
   const existing = db.cards.find((c) => c.raynetCompanyId === company.id && c.segment === segDef.key);
   if (existing) {
+    // Kontrola vlastnictví i zde — jinak by šlo přes POST přečíst cizí kartu.
+    if (!canAccessCard(req.user!, existing)) {
+      res.status(403).json({ error: "Kartu pro tento segment už vede jiný obchodník." });
+      return;
+    }
     res.json({ card: existing, created: false });
     return;
   }

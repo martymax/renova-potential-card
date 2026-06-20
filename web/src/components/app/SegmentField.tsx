@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { AuthedImage } from "@/components/app/AuthedImage";
 import type { CodebookItem, FieldDef, UploadedFile } from "@/lib/types";
 
 interface Props {
@@ -175,7 +176,7 @@ function FileField({ field, value, maxAttachmentMB, onChange }: {
     return (
       <div className="flex items-center gap-3 rounded-md border bg-muted/40 p-3">
         {value.url ? (
-          <img src={value.url} alt="Náhled stávajících měřidel" className="h-14 w-14 rounded object-cover" />
+          <AuthedImage url={value.url} alt="Náhled stávajících měřidel" className="h-14 w-14 rounded object-cover" />
         ) : (
           <div className="flex h-14 w-14 items-center justify-center rounded bg-muted"><Paperclip className="h-5 w-5 text-muted-foreground" aria-hidden="true" /></div>
         )}

@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { authMiddleware, requireRole } from "../lib/auth.js";
 import { getDb } from "../lib/store.js";
-import { SEGMENTS, getSegment } from "../lib/segments.js";
+import { SEGMENTS } from "../lib/segments.js";
 import type { Card } from "../types.js";
 
 export const reportsRouter = Router();
@@ -128,12 +128,18 @@ reportsRouter.get("/potential", (_req, res) => {
 // CSV export (§13)
 reportsRouter.get("/export.csv", (_req, res) => {
   const cards = getDb().cards;
-  const header = ["Firma", "IČO_raynetId", "Segment", "Stav", "Dokončenost_%", "Obchodník", "Aktualizováno", "GPS_status", "Quality_flagy"];
-  const lines = [header.join(";")];
+
+  // Stabilní, popsané sloupce: základ + všechna reportovatelná pole napříč
+  // segmenty (každý sloupec má hlavičku; segment, kam pole nepatří, je prázdný).
+  const baseHeader = ["Firma", "IČO_raynetId", "Segment", "Stav", "Dokončenost_%", "Obchodník", "Aktualizováno", "GPS_status", "Quality_flagy"];
+  const reportableCols = SEGMENTS.flatMap((seg) =>
+    seg.fields.filter((f) => f.reportable).map((f) => ({ segment: seg.key, key: f.key, header: `${f.label} (${seg.label})` })),
+  );
+
+  const lines = [[...baseHeader, ...reportableCols.map((c) => c.header)].map(csvCell).join(";")];
 
   for (const c of cards) {
-    const seg = getSegment(c.segment);
-    const base = [
+    const row = [
       c.companyName,
       String(c.raynetCompanyId),
       SEGMENT_LABEL[c.segment] ?? c.segment,
@@ -144,13 +150,11 @@ reportsRouter.get("/export.csv", (_req, res) => {
       c.gps?.status ?? "",
       String(c.qualityFlags.length),
     ];
-    // Reportovatelná pole segmentu
-    const reportable = (seg?.fields ?? []).filter((f) => f.reportable);
-    for (const f of reportable) {
-      const v = c.values[f.key];
-      base.push(Array.isArray(v) ? v.join("|") : v == null ? "" : String(v));
+    for (const col of reportableCols) {
+      const v = col.segment === c.segment ? c.values[col.key] : undefined;
+      row.push(Array.isArray(v) ? v.join("|") : v == null ? "" : String(v));
     }
-    lines.push(base.map(csvCell).join(";"));
+    lines.push(row.map(csvCell).join(";"));
   }
 
   res.setHeader("Content-Type", "text/csv; charset=utf-8");
