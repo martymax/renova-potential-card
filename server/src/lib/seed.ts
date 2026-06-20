@@ -1,7 +1,6 @@
 // Počáteční data: uživatelé (synchronizovaní z Raynetu), číselníky,
 // mapování polí na Raynet a systémová nastavení.
 
-import { randomBytes } from "node:crypto";
 import { genId } from "./store.js";
 import { hashPassword } from "./password.js";
 import { SEGMENTS } from "./segments.js";
@@ -9,8 +8,8 @@ import type { CodebookItem, DbShape, FieldMapping } from "../types.js";
 
 /**
  * Heslo uživatele: 1) z env (KP_PASSWORD_<JMENO>), 2) demo (= jméno) jen mimo
- * produkci nebo když je KP_DEMO_MODE=true, 3) jinak náhodné a jednou vypsané do
- * logu. V produkci tedy nikdy nevznikne výchozí účet admin/admin.
+ * produkci nebo když je KP_DEMO_MODE=true, 3) v produkci bez hesla → tvrdá chyba
+ * (žádné generované heslo do logu). V produkci tedy nikdy nevznikne admin/admin.
  */
 function resolvePassword(username: string): string {
   const envKey = `KP_PASSWORD_${username.toUpperCase()}`;
@@ -20,9 +19,7 @@ function resolvePassword(username: string): string {
   const demoAllowed = process.env.NODE_ENV !== "production" || process.env.KP_DEMO_MODE === "true";
   if (demoAllowed) return username;
 
-  const generated = randomBytes(9).toString("base64url");
-  console.warn(`[seed] ${envKey} není nastaveno — vygenerováno dočasné heslo pro „${username}": ${generated}`);
-  return generated;
+  throw new Error(`${envKey} musí být v produkci nastaveno (nebo nastav KP_DEMO_MODE=true pro demo přístupy).`);
 }
 
 function items(labels: string[]): CodebookItem[] {

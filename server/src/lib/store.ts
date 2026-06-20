@@ -2,7 +2,7 @@
 // Záměrně bez nativních závislostí — architektura je za repository rozhraním,
 // takže přechod na SQLite/Postgres je výměna této vrstvy.
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync, renameSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync, renameSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { DbShape } from "../types.js";
@@ -27,9 +27,11 @@ export function initStore(seed: () => DbShape): DbShape {
   if (existsSync(DB_PATH)) {
     try {
       db = JSON.parse(readFileSync(DB_PATH, "utf8")) as DbShape;
-    } catch {
-      db = seed();
-      persist();
+    } catch (error) {
+      // Nepřepisuj poškozenou DB tiše — zazálohuj a spadni, ať nedojde ke ztrátě dat.
+      const backup = `${DB_PATH}.corrupt.${Date.now()}`;
+      copyFileSync(DB_PATH, backup);
+      throw new Error(`Poškozený obsah ${DB_PATH}, záloha uložena do ${backup}.`, { cause: error });
     }
   } else {
     db = seed();

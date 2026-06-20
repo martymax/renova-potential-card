@@ -23,10 +23,14 @@ FROM node:22-slim AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 
-COPY --from=build /app/server/package.json ./server/package.json
-COPY --from=build /app/server/node_modules ./server/node_modules
-COPY --from=build /app/server/dist ./server/dist
-COPY --from=build /app/web/dist ./web/dist
+# Běh jako nerootový uživatel (node v base image).
+COPY --from=build --chown=node:node /app/server/package.json ./server/package.json
+COPY --from=build --chown=node:node /app/server/node_modules ./server/node_modules
+COPY --from=build --chown=node:node /app/server/dist ./server/dist
+COPY --from=build --chown=node:node /app/web/dist ./web/dist
+# Zapisovatelný adresář pro úložiště a nahrané přílohy.
+RUN mkdir -p /app/server/data && chown -R node:node /app/server/data
+USER node
 
 # Railway/hosting předá PORT přes proměnnou prostředí; server ji čte.
 EXPOSE 8080

@@ -10,6 +10,7 @@ import { color, chartPalette } from "@/ds/tokens";
 import { ACQUISITION_LABEL, GPS_LABEL, formatDate, formatNumber } from "@/lib/labels";
 import { PageHeader } from "@/components/app/PageHeader";
 import { StatTile } from "@/components/app/StatTile";
+import { ErrorState } from "@/components/app/ErrorState";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -59,7 +60,9 @@ export function ReportsPage() {
     }
   }
 
-  if (overview.loading || !overview.data) return <Skeleton className="h-96" />;
+  if (overview.loading) return <Skeleton className="h-96" />;
+  if (overview.error || !overview.data)
+    return <ErrorState title="Reporting se nepodařilo načíst" message={overview.error ?? undefined} onRetry={overview.refetch} />;
   const t = overview.data.totals;
 
   return (
@@ -150,7 +153,9 @@ export function ReportsPage() {
               <CardDescription>Termíny poptávkových řízení v segmentu vodárny, obce, teplárny.</CardDescription>
             </CardHeader>
             <CardContent>
-              {tenders.loading ? <Skeleton className="h-32" /> : (
+              {tenders.loading ? <Skeleton className="h-32" /> : tenders.error ? (
+                <ErrorState title="Tendry se nepodařilo načíst" message={tenders.error} onRetry={tenders.refetch} />
+              ) : (
                 <>
                   <div className="mb-4 grid gap-3 sm:grid-cols-3">
                     {(["3", "6", "12"] as const).map((b) => {
@@ -190,7 +195,9 @@ export function ReportsPage() {
 
         {/* Terénní aktivita */}
         <TabsContent value="field" className="space-y-6">
-          {activity.loading || !activity.data ? <Skeleton className="h-64" /> : (
+          {activity.loading ? <Skeleton className="h-64" /> : activity.error || !activity.data ? (
+            <ErrorState title="Terénní aktivitu se nepodařilo načíst" message={activity.error ?? undefined} onRetry={activity.refetch} />
+          ) : (
             <>
               <div className="grid gap-6 lg:grid-cols-2">
                 <Card>
@@ -256,7 +263,9 @@ export function ReportsPage() {
 
         {/* Potenciál */}
         <TabsContent value="potential">
-          {potential.loading || !potential.data ? <Skeleton className="h-40" /> : (
+          {potential.loading ? <Skeleton className="h-40" /> : potential.error || !potential.data ? (
+            <ErrorState title="Potenciál se nepodařilo načíst" message={potential.error ?? undefined} onRetry={potential.refetch} />
+          ) : (
             <div className="grid gap-4 sm:grid-cols-3">
               <Card className="border-l-4 border-l-primary">
                 <CardHeader><CardTitle className="text-base">Vodárny, obce, teplárny</CardTitle></CardHeader>

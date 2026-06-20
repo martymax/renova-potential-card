@@ -162,6 +162,19 @@ cardsRouter.put("/:id", (req: AuthedRequest, res) => {
   }
 
   const { values, mode, acquisition, deviceLocation } = req.body ?? {};
+
+  // Validace vstupních enumů, ať se do databáze nedostanou nesmyslné hodnoty.
+  const ALLOWED_MODES = new Set(["draft", "complete"]);
+  const ALLOWED_ACQ = new Set(["osobni_navsteva", "telefonat", "email", "interni_doplneni", "jiny"]);
+  if (mode !== undefined && !ALLOWED_MODES.has(String(mode))) {
+    res.status(400).json({ error: "Neplatný režim uložení." });
+    return;
+  }
+  if (acquisition !== undefined && !ALLOWED_ACQ.has(String(acquisition))) {
+    res.status(400).json({ error: "Neplatný způsob získání údajů." });
+    return;
+  }
+
   const newValues: Record<string, unknown> = { ...card.values, ...(values ?? {}) };
   const oldValues = card.values;
 
@@ -218,6 +231,10 @@ cardsRouter.post("/:id/sync", (req: AuthedRequest, res) => {
   const card = db.cards.find((c) => c.id === req.params.id);
   if (!card || !canAccessCard(req.user!, card)) {
     res.status(404).json({ error: "Karta nebyla nalezena." });
+    return;
+  }
+  if (req.user!.role === "reditel") {
+    res.status(403).json({ error: "Obchodní ředitel karty needituje, jen prohlíží a reportuje." });
     return;
   }
   const company = raynetGetCompany(card.raynetCompanyId)!;

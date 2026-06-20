@@ -26,6 +26,12 @@ export function hardErrors(card: Card): { missingRequired: string[]; typeErrors:
 function display(value: unknown): string {
   if (value === null || value === undefined || value === "") return "—";
   if (Array.isArray(value)) return value.join(", ");
+  if (typeof value === "object") {
+    const o = value as Record<string, unknown>;
+    if (typeof o.name === "string" && o.name) return o.name; // příloha → název souboru
+    if (typeof o.url === "string" && o.url) return o.url;
+    try { return JSON.stringify(value); } catch { return "[data]"; }
+  }
   return String(value);
 }
 

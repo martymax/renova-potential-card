@@ -13,7 +13,8 @@ persist();
 const app = createApp();
 const webServed = process.env.NODE_ENV === "production" ? " (+ frontend)" : "";
 
-const PORT = Number(process.env.PORT ?? 4000);
+const parsedPort = Number.parseInt(process.env.PORT ?? "4000", 10);
+const PORT = Number.isInteger(parsedPort) && parsedPort > 0 && parsedPort <= 65535 ? parsedPort : 4000;
 app.listen(PORT, () => {
   console.log(`Karta potenciálu API běží na http://localhost:${PORT}${webServed}`);
 });

@@ -172,6 +172,42 @@ test("reporting jen pro ředitele/admina, mapování jen pro admina", async () =
   assert.equal((await req("PUT", "/api/mappings", { token: obchodnik, body: { mappings: [] } })).status, 403);
 });
 
+test("ředitel nesmí synchronizovat kartu do Raynetu (403)", async () => {
+  const owner = await tokenFor("obchodnik");
+  const card = await openSvjCard(owner);
+  const reditel = await tokenFor("reditel");
+  assert.equal((await req("POST", `/api/cards/${card.id}/sync`, { token: reditel })).status, 403);
+});
+
+test("neplatný mode/acquisition je odmítnut (400)", async () => {
+  const token = await tokenFor("obchodnik");
+  const card = await openSvjCard(token);
+  assert.equal((await req("PUT", `/api/cards/${card.id}`, { token, body: { mode: "smazat", values: {} } })).status, 400);
+  assert.equal((await req("PUT", `/api/cards/${card.id}`, { token, body: { mode: "draft", acquisition: "hack", values: {} } })).status, 400);
+});
+
+test("SVJ: placeholder fotka bez URL neprojde jako kompletní", async () => {
+  const token = await tokenFor("obchodnik");
+  const card = await openSvjCard(token);
+  const r = await req("PUT", `/api/cards/${card.id}`, {
+    token, body: { mode: "complete", acquisition: "telefonat", values: {
+      pocet_bytu: 10, pocet_meridel: 40, skladba_meridel: "vodoměry", stavebni_delky: "110 mm",
+      technologie_odectu: "NB-IoT", specifika_instalace: "ok",
+      znacka_meridel: "", // značka prázdná
+      foto_meridel: { url: "", name: "x.jpg", size: 0 }, // placeholder bez reálné URL
+    } },
+  });
+  assert.equal(r.status, 422);
+  assert.ok(r.data.missingRequired.includes("znacka_meridel"));
+});
+
+test("reporty seskupují obchodníky podle ID (pole userId)", async () => {
+  const reditel = await tokenFor("reditel");
+  const r = await req("GET", "/api/reports/overview", { token: reditel });
+  assert.equal(r.status, 200);
+  assert.ok(r.data.byRep.every((x: any) => typeof x.userId === "string" && x.userId.length > 0));
+});
+
 // ---------- Upload hardening ----------
 
 test("upload: HTML s image MIME se uloží jako obrázek, neobrázek je odmítnut", async () => {

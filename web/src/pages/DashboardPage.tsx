@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/app/PageHeader";
 import { StatTile } from "@/components/app/StatTile";
 import { CardRow } from "@/components/app/CardRow";
 import { EmptyState } from "@/components/app/EmptyState";
+import { ErrorState } from "@/components/app/ErrorState";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -40,7 +41,7 @@ export function DashboardPage() {
 }
 
 function RepDashboard() {
-  const { data, loading } = useResource<{ cards: CardType[] }>("/cards");
+  const { data, loading, error, refetch } = useResource<{ cards: CardType[] }>("/cards");
   const cards = data?.cards ?? [];
   const drafts = cards.filter((c) => c.status === "draft");
   const stale = cards.filter((c) => c.stale);
@@ -48,6 +49,7 @@ function RepDashboard() {
   const recent = [...cards].slice(0, 6);
 
   if (loading) return <LoadingGrid />;
+  if (error) return <ErrorState title="Karty se nepodařilo načíst" message={error} onRetry={refetch} />;
 
   return (
     <div className="space-y-8">
@@ -81,10 +83,18 @@ function RepDashboard() {
 
 function ManagerDashboard() {
   const overview = useResource<OverviewResp>("/reports/overview");
-  const { data, loading } = useResource<{ cards: CardType[] }>("/cards?stale=1");
+  const { data, loading, error, refetch } = useResource<{ cards: CardType[] }>("/cards?stale=1");
   const t = overview.data?.totals;
 
   if (overview.loading || loading) return <LoadingGrid />;
+  if (overview.error || error)
+    return (
+      <ErrorState
+        title="Přehled se nepodařilo načíst"
+        message={overview.error ?? error ?? undefined}
+        onRetry={() => { overview.refetch(); refetch(); }}
+      />
+    );
 
   return (
     <div className="space-y-8">

@@ -16,8 +16,17 @@ adminRouter.get("/codebooks", (_req, res) => {
   res.json({ codebooks: getDb().codebooks });
 });
 
+// Ochrana proti prototype pollution přes název klíče číselníku.
+function unsafeKey(key: string): boolean {
+  return key === "__proto__" || key === "prototype" || key === "constructor";
+}
+
 adminRouter.post("/codebooks/:key", requireRole("admin"), (req, res) => {
   const key = req.params.key;
+  if (unsafeKey(key)) {
+    res.status(400).json({ error: "Neplatný klíč číselníku." });
+    return;
+  }
   const label = String(req.body?.label ?? "").trim();
   if (!label) {
     res.status(400).json({ error: "Zadej název položky." });
@@ -33,6 +42,10 @@ adminRouter.post("/codebooks/:key", requireRole("admin"), (req, res) => {
 
 adminRouter.put("/codebooks/:key/:id", requireRole("admin"), (req, res) => {
   const { key, id } = req.params;
+  if (unsafeKey(key)) {
+    res.status(400).json({ error: "Neplatný klíč číselníku." });
+    return;
+  }
   mutate((d) => {
     const item = d.codebooks[key]?.find((i) => i.id === id);
     if (item) {
@@ -45,6 +58,10 @@ adminRouter.put("/codebooks/:key/:id", requireRole("admin"), (req, res) => {
 
 adminRouter.delete("/codebooks/:key/:id", requireRole("admin"), (req, res) => {
   const { key, id } = req.params;
+  if (unsafeKey(key)) {
+    res.status(400).json({ error: "Neplatný klíč číselníku." });
+    return;
+  }
   // Soft delete (deaktivace) — historická data v kartách zůstávají platná.
   mutate((d) => {
     const item = d.codebooks[key]?.find((i) => i.id === id);

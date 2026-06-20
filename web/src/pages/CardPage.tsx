@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/app/PageHeader";
 import { SegmentField } from "@/components/app/SegmentField";
 import { AuditTrail } from "@/components/app/AuditTrail";
+import { ErrorState } from "@/components/app/ErrorState";
 import { StatusBadge, StaleBadge, GpsBadge } from "@/components/app/StatusBadges";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -71,8 +72,19 @@ export function CardPage() {
     [segments.data, card?.segment],
   );
 
-  if (cardRes.loading || !card || !segment || !settingsRes.data || !codebooksRes.data) {
+  if (cardRes.loading || segments.loading || settingsRes.loading || codebooksRes.loading) {
     return <Skeleton className="h-96" />;
+  }
+  if (cardRes.error || !card) {
+    return <ErrorState title="Kartu se nepodařilo načíst" message={cardRes.error ?? undefined} onRetry={cardRes.refetch} />;
+  }
+  if (!segment || !settingsRes.data || !codebooksRes.data) {
+    return (
+      <ErrorState
+        title="Konfiguraci formuláře se nepodařilo načíst"
+        onRetry={() => { segments.refetch(); settingsRes.refetch(); codebooksRes.refetch(); }}
+      />
+    );
   }
 
   const codebooks = codebooksRes.data.codebooks;
@@ -118,7 +130,8 @@ export function CardPage() {
     } catch (e) {
       if (e instanceof ApiError && e.status === 422) {
         const miss = (e.payload.missingRequired as string[]) ?? [];
-        setInvalid(new Set(miss));
+        const typeErrs = (e.payload.typeErrors as { field: string }[]) ?? [];
+        setInvalid(new Set([...miss, ...typeErrs.map((t) => t.field)]));
         toast.error(e.message);
       } else {
         toast.error(e instanceof Error ? e.message : "Uložení se nezdařilo.");

@@ -39,9 +39,9 @@ reportsRouter.get("/overview", (_req, res) => {
   });
 
   const byRep = Object.values(
-    cards.reduce<Record<string, { user: string; total: number; complete: number; avg: number; sum: number }>>((acc, c) => {
-      const key = c.createdByName;
-      acc[key] ??= { user: key, total: 0, complete: 0, avg: 0, sum: 0 };
+    cards.reduce<Record<string, { userId: string; user: string; total: number; complete: number; avg: number; sum: number }>>((acc, c) => {
+      const key = c.createdBy; // stabilní ID, ne jméno (shodná jména by se slila)
+      acc[key] ??= { userId: c.createdBy, user: c.createdByName, total: 0, complete: 0, avg: 0, sum: 0 };
       acc[key].total += 1;
       acc[key].sum += c.completeness;
       if (c.status === "complete") acc[key].complete += 1;

@@ -19,15 +19,16 @@ export function SearchPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
     const handle = setTimeout(() => {
       setLoading(true);
       api
         .get<{ companies: Company[] }>(`/raynet/companies?q=${encodeURIComponent(q)}`)
-        .then((d) => { setCompanies(d.companies); setError(null); })
-        .catch((e) => setError(e instanceof Error ? e.message : "Vyhledávání selhalo."))
-        .finally(() => setLoading(false));
+        .then((d) => { if (!cancelled) { setCompanies(d.companies); setError(null); } })
+        .catch((e) => { if (!cancelled) setError(e instanceof Error ? e.message : "Vyhledávání selhalo."); })
+        .finally(() => { if (!cancelled) setLoading(false); });
     }, 250);
-    return () => clearTimeout(handle);
+    return () => { cancelled = true; clearTimeout(handle); };
   }, [q]);
 
   return (

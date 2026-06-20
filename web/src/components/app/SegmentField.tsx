@@ -109,9 +109,9 @@ function FieldControl({
       );
     }
     case "multiselect":
-      return <MultiSelect field={field} value={(value as string[]) ?? []} codebooks={codebooks} onChange={onChange} />;
+      return <MultiSelect id={id} describedBy={describedBy} invalid={invalid} field={field} value={(value as string[]) ?? []} codebooks={codebooks} onChange={onChange} />;
     case "file":
-      return <FileField field={field} value={value as UploadedFile | null} maxAttachmentMB={maxAttachmentMB} onChange={onChange} />;
+      return <FileField id={id} describedBy={describedBy} invalid={invalid} field={field} value={value as UploadedFile | null} maxAttachmentMB={maxAttachmentMB} onChange={onChange} />;
     default:
       return (
         <Input id={id} aria-describedby={describedBy} value={(value as string) ?? ""} className={invalidRing}
@@ -120,7 +120,8 @@ function FieldControl({
   }
 }
 
-function MultiSelect({ field, value, codebooks, onChange }: {
+function MultiSelect({ id, describedBy, invalid, field, value, codebooks, onChange }: {
+  id: string; describedBy?: string; invalid?: boolean;
   field: FieldDef; value: string[]; codebooks: Record<string, CodebookItem[]>; onChange: (key: string, value: unknown) => void;
 }) {
   const opts = optionsFor(field, codebooks);
@@ -129,7 +130,7 @@ function MultiSelect({ field, value, codebooks, onChange }: {
     onChange(field.key, next);
   };
   return (
-    <div className="flex flex-wrap gap-2">
+    <div id={id} role="group" aria-describedby={describedBy} aria-invalid={invalid || undefined} className="flex flex-wrap gap-2">
       {opts.map((o) => {
         const active = value.includes(o.value);
         return (
@@ -148,7 +149,8 @@ function MultiSelect({ field, value, codebooks, onChange }: {
   );
 }
 
-function FileField({ field, value, maxAttachmentMB, onChange }: {
+function FileField({ id, describedBy, invalid, field, value, maxAttachmentMB, onChange }: {
+  id: string; describedBy?: string; invalid?: boolean;
   field: FieldDef; value: UploadedFile | null; maxAttachmentMB: number; onChange: (key: string, value: unknown) => void;
 }) {
   const [busy, setBusy] = useState(false);
@@ -195,7 +197,8 @@ function FileField({ field, value, maxAttachmentMB, onChange }: {
     <label className="flex cursor-pointer items-center gap-3 rounded-md border border-dashed border-input bg-background p-4 text-sm text-muted-foreground transition-colors hover:bg-muted">
       <Upload className="h-5 w-5" aria-hidden="true" />
       <span>{busy ? "Nahrávám…" : `Nahrát fotografii (JPG, PNG, WebP do ${maxAttachmentMB} MB)`}</span>
-      <input type="file" accept="image/*" className="sr-only" disabled={busy}
+      <input id={id} aria-describedby={describedBy} aria-invalid={invalid || undefined}
+        type="file" accept="image/*" className="sr-only" disabled={busy}
         onChange={(e) => { const f = e.target.files?.[0]; if (f) void handleFile(f); }} />
     </label>
   );

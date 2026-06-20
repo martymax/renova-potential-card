@@ -11,6 +11,14 @@ function isEmpty(v: unknown): boolean {
   return false;
 }
 
+/** Příloha je „vyplněná" jen se skutečnou URL — placeholder {} / {url:""} neprojde. */
+function isFileEmpty(v: unknown): boolean {
+  if (v === null || v === undefined) return true;
+  if (typeof v !== "object") return true;
+  const rec = v as Record<string, unknown>;
+  return typeof rec.url !== "string" || rec.url.trim() === "";
+}
+
 /** Je pole v daném kontextu povinné? Řeší i podmíněná pravidla segmentu. */
 export function isFieldRequired(
   field: FieldDef,
@@ -24,7 +32,7 @@ export function isFieldRequired(
   if (segment.conditionalRule === "svjMarkOrPhoto") {
     if (field.key === "znacka_meridel" || field.key === "foto_meridel") {
       const hasMark = !isEmpty(values["znacka_meridel"]);
-      const hasPhoto = !isEmpty(values["foto_meridel"]);
+      const hasPhoto = !isFileEmpty(values["foto_meridel"]);
       // Pole je povinné jen tehdy, když ani jedno z dvojice není vyplněné.
       return !hasMark && !hasPhoto;
     }

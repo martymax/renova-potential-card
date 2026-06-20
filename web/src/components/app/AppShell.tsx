@@ -113,6 +113,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => setMobileOpen(false), [location.pathname]);
 
+  // Escape zavře mobilní menu (modal a11y).
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setMobileOpen(false); };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [mobileOpen]);
+
   if (!user) return <>{children}</>;
 
   return (
@@ -138,7 +146,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {mobileOpen && (
         <div className="fixed inset-0 z-50 lg:hidden">
           <div className="absolute inset-0 bg-primary/40 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
-          <div className="absolute left-0 top-0 flex h-full w-72 flex-col bg-sidebar shadow-xl">
+          <div role="dialog" aria-modal="true" aria-label="Hlavní menu"
+            className="absolute left-0 top-0 flex h-full w-72 flex-col bg-sidebar shadow-xl">
             <div className="flex items-center justify-between">
               <Brand />
               <Button variant="ghost" size="icon" aria-label="Zavřít menu" className="mr-2" onClick={() => setMobileOpen(false)}>

@@ -5,6 +5,7 @@ import { api } from "@/lib/api";
 import { useResource } from "@/hooks/useResource";
 import { CODEBOOK_LABEL, ROLE_LABEL, SEGMENT_LABEL } from "@/lib/labels";
 import { PageHeader } from "@/components/app/PageHeader";
+import { ErrorState } from "@/components/app/ErrorState";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -50,14 +51,24 @@ function RaynetTab() {
 
   async function refresh() {
     setBusy(true);
-    try { setPing(await api.get("/raynet/ping")); } finally { setBusy(false); }
+    try {
+      setPing(await api.get("/raynet/ping"));
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Test připojení selhal.");
+    } finally {
+      setBusy(false);
+    }
   }
   useEffect(() => { void refresh(); }, []);
 
   async function toggle(connected: boolean) {
-    const p = await api.post<{ ok: boolean; instance: string; checkedAt: string }>("/raynet/connection", { connected });
-    setPing(p);
-    toast[connected ? "success" : "warning"](connected ? "Raynet připojení obnoveno." : "Raynet výpadek nasimulován — lokální uložení má prioritu.");
+    try {
+      const p = await api.post<{ ok: boolean; instance: string; checkedAt: string }>("/raynet/connection", { connected });
+      setPing(p);
+      toast[connected ? "success" : "warning"](connected ? "Raynet připojení obnoveno." : "Raynet výpadek nasimulován — lokální uložení má prioritu.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Změna stavu připojení selhala.");
+    }
   }
 
   return (
@@ -115,22 +126,31 @@ function RaynetTab() {
 }
 
 function CodebooksTab() {
-  const { data, loading, refetch } = useResource<{ codebooks: Record<string, CodebookItem[]> }>("/codebooks");
+  const { data, loading, error, refetch } = useResource<{ codebooks: Record<string, CodebookItem[]> }>("/codebooks");
   const [drafts, setDrafts] = useState<Record<string, string>>({});
 
-  if (loading || !data) return <Skeleton className="h-64" />;
+  if (loading) return <Skeleton className="h-64" />;
+  if (error || !data) return <ErrorState title="Číselníky se nepodařilo načíst" message={error ?? undefined} onRetry={refetch} />;
 
   async function add(key: string) {
     const label = (drafts[key] ?? "").trim();
     if (!label) return;
-    await api.post(`/codebooks/${key}`, { label });
-    setDrafts((d) => ({ ...d, [key]: "" }));
-    toast.success("Položka přidána.");
-    refetch();
+    try {
+      await api.post(`/codebooks/${key}`, { label });
+      setDrafts((d) => ({ ...d, [key]: "" }));
+      toast.success("Položka přidána.");
+      refetch();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Přidání položky selhalo.");
+    }
   }
   async function toggle(key: string, item: CodebookItem) {
-    await api.put(`/codebooks/${key}/${item.id}`, { active: !item.active });
-    refetch();
+    try {
+      await api.put(`/codebooks/${key}/${item.id}`, { active: !item.active });
+      refetch();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Aktualizace položky selhala.");
+    }
   }
 
   return (
@@ -166,18 +186,20 @@ function CodebooksTab() {
 }
 
 function MappingsTab() {
-  const { data, loading } = useResource<{ mappings: FieldMapping[] }>("/mappings");
+  const { data, loading, error, refetch } = useResource<{ mappings: FieldMapping[] }>("/mappings");
   const [rows, setRows] = useState<FieldMapping[]>([]);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => { if (data) setRows(data.mappings); }, [data]);
 
   if (loading) return <Skeleton className="h-64" />;
+  if (error || !data) return <ErrorState title="Mapování se nepodařilo načíst" message={error ?? undefined} onRetry={refetch} />;
 
   function set(i: number, patch: Partial<FieldMapping>) {
     setRows((r) => r.map((m, idx) => (idx === i ? { ...m, ...patch } : m)));
   }
   async function saveAll() {
+    if (!data) return; // nikdy nepřepiš server prázdným polem, když se mapování nenačetlo
     setSaving(true);
     try {
       await api.put("/mappings", { mappings: rows });
@@ -223,12 +245,13 @@ function MappingsTab() {
 }
 
 function SettingsTab() {
-  const { data, loading } = useResource<{ settings: Settings }>("/settings");
+  const { data, loading, error, refetch } = useResource<{ settings: Settings }>("/settings");
   const [s, setS] = useState<Settings | null>(null);
   const [saving, setSaving] = useState(false);
   useEffect(() => { if (data) setS(data.settings); }, [data]);
 
-  if (loading || !s) return <Skeleton className="h-64" />;
+  if (loading) return <Skeleton className="h-64" />;
+  if (error || !s) return <ErrorState title="Nastavení se nepodařilo načíst" message={error ?? undefined} onRetry={refetch} />;
 
   async function save() {
     if (!s) return;
