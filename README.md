@@ -60,8 +60,22 @@ V produkci (`NODE_ENV=production`) **nevzniká** výchozí účet `admin/admin`:
 | Vrstva | Technologie |
 |---|---|
 | Frontend | React 18 · TypeScript · Vite · Tailwind v3 (Simon Says preset) · shadcn/ui (Radix) · lucide-react · framer-motion · recharts · sonner · next-themes |
-| Backend | Node 22 · Express · TypeScript (tsx) · souborové úložiště za repository rozhraním |
+| Backend | Node 22 · Express · TypeScript · úložiště Postgres / soubor za jednotným rozhraním |
 | Design | **Simon Says** design systém — viz `.claude/skills/simon-says-ui/` |
+
+### Úložiště
+
+- **Postgres** — když je nastaveno `DATABASE_URL` (typicky Railway Postgres addon). Celý
+  stav aplikace se ukládá jako JSONB snapshot; přežije redeploy. Zápisy se slučují a
+  serializují, při vypnutí se dokončí (graceful shutdown).
+- **Soubor** — jinak `server/data/db.json` (dev, testy, CI). Žádná DB není potřeba.
+
+Přechod je výměna jedné vrstvy (`server/src/lib/store.ts`); zbytek aplikace se nemění.
+Pro SSL k Postgresu nastav `PGSSL=require` (nebo `sslmode=require` v URL).
+
+> Pozn.: nahrané fotografie SVJ se ukládají na disk (`server/data/uploads`). Na
+> ephemerálním FS (Railway bez volume) nepřežijí redeploy — pro trvalé přílohy
+> připoj volume nebo je v další verzi přesuň do úložiště (DB/objektové).
 
 ## Nasazení (Railway / Docker)
 
@@ -98,8 +112,9 @@ npm run install:all && npm run build && npm start
   doplněno vzdáleně*; ukládá se jen výsledek, ne trasa (§7.5, §12)
 - **Audit změn** — kdo, kdy, původní a nová hodnota (§7.6)
 - **Synchronizace do Raynetu** (write-back) vybraných a skórovaných polí (§7.7, §11.4)
-- **Reporting** — vyplněnost podle segmentu a obchodníka, blížící se tendry (3/6/12 měs.),
-  terénní aktivita a GPS, kvalita dat, obchodní potenciál (§10)
+- **Reporting** — vyplněnost podle segmentu a obchodníka, **měsíční manažerský report**
+  (nově/aktualizované karty, nekompletní, kvalita, tendry, ověření návštěv — §10.6),
+  blížící se tendry (3/6/12 měs.), terénní aktivita a GPS, kvalita dat, obchodní potenciál (§10)
 - **CSV export** s BOM pro Excel (§13)
 - **Administrace** — číselníky, mapování polí na Raynet, toleranční okruh, zdroj GPS,
   zastarávání karet (180 dní), velikost příloh, pravidla kvality (§9.3)

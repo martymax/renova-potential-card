@@ -18,7 +18,7 @@ const { seedDemoCards } = await import("../src/lib/demo.js");
 const { createApp } = await import("../src/app.js");
 const { csvCell } = await import("../src/routes/reports.js");
 
-initStore(seed);
+await initStore(seed);
 seedDemoCards();
 
 const server = createApp().listen(0);
@@ -206,6 +206,25 @@ test("reporty seskupují obchodníky podle ID (pole userId)", async () => {
   const r = await req("GET", "/api/reports/overview", { token: reditel });
   assert.equal(r.status, 200);
   assert.ok(r.data.byRep.every((x: any) => typeof x.userId === "string" && x.userId.length > 0));
+});
+
+test("měsíční report (§10.6) vrací souhrn a respektuje role", async () => {
+  const reditel = await tokenFor("reditel");
+  const r = await req("GET", "/api/reports/monthly", { token: reditel });
+  assert.equal(r.status, 200);
+  assert.equal(typeof r.data.newCards, "number");
+  assert.equal(typeof r.data.updatedCards, "number");
+  assert.ok(r.data.tenders && typeof r.data.tenders["3"] === "number");
+  assert.ok(r.data.visits && typeof r.data.visits.osobni === "number");
+  assert.ok(Array.isArray(r.data.incomplete.items));
+
+  // konkrétní měsíc bez aktivity → nulové počty
+  const empty = await req("GET", "/api/reports/monthly?month=2000-01", { token: reditel });
+  assert.equal(empty.data.newCards, 0);
+
+  // obchodník nemá na reporting přístup
+  const obch = await tokenFor("obchodnik");
+  assert.equal((await req("GET", "/api/reports/monthly", { token: obch })).status, 403);
 });
 
 // ---------- Upload hardening ----------

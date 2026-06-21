@@ -2,17 +2,19 @@ import { useState } from "react";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, CartesianGrid,
 } from "recharts";
-import { Download, Gauge, CalendarClock, MapPinned, Layers, AlertTriangle } from "lucide-react";
+import { Download, Gauge, CalendarClock, MapPinned, Layers, AlertTriangle, FilePlus2, RefreshCw, FileEdit, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { useResource } from "@/hooks/useResource";
 import { color, chartPalette } from "@/ds/tokens";
-import { ACQUISITION_LABEL, GPS_LABEL, formatDate, formatNumber } from "@/lib/labels";
+import { ACQUISITION_LABEL, GPS_LABEL, SEGMENT_LABEL, formatDate, formatNumber } from "@/lib/labels";
 import { PageHeader } from "@/components/app/PageHeader";
 import { StatTile } from "@/components/app/StatTile";
 import { ErrorState } from "@/components/app/ErrorState";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -88,10 +90,13 @@ export function ReportsPage() {
       <Tabs defaultValue="completeness">
         <TabsList className="flex-wrap">
           <TabsTrigger value="completeness">Vyplněnost</TabsTrigger>
+          <TabsTrigger value="monthly">Měsíční report</TabsTrigger>
           <TabsTrigger value="tenders">Tendry</TabsTrigger>
           <TabsTrigger value="field">Terénní aktivita</TabsTrigger>
           <TabsTrigger value="potential">Potenciál</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="monthly"><MonthlyTab /></TabsContent>
 
         {/* Vyplněnost */}
         <TabsContent value="completeness" className="space-y-6">
@@ -302,6 +307,105 @@ function Row({ label, value }: { label: string; value: string | number }) {
     <div className="flex items-center justify-between border-b border-border/60 pb-2 last:border-0 last:pb-0">
       <span className="text-muted-foreground">{label}</span>
       <span className="font-display text-lg font-bold">{value}</span>
+    </div>
+  );
+}
+
+interface Monthly {
+  period: { month: string; from: string; to: string };
+  newCards: number;
+  updatedCards: number;
+  incomplete: { count: number; items: { cardId: string; company: string; segment: keyof typeof SEGMENT_LABEL; rep: string; missing: number }[] };
+  qualityFlagCards: number;
+  tenders: { "3": number; "6": number; "12": number };
+  visits: { osobni: number; overeno: number; neovereno: number; mimo: number; vzdalene: number };
+}
+
+function MonthlyTab() {
+  const [month, setMonth] = useState(() => new Date().toISOString().slice(0, 7));
+  const { data, loading, error, refetch } = useResource<Monthly>(`/reports/monthly?month=${month}`);
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div className="space-y-1.5">
+          <Label htmlFor="rep-month">Období</Label>
+          <Input id="rep-month" type="month" value={month} onChange={(e) => setMonth(e.target.value)} className="w-48" />
+        </div>
+        <p className="text-sm text-muted-foreground">Manažerský souhrn za vybraný měsíc dle zadání §10.6.</p>
+      </div>
+
+      {loading ? <Skeleton className="h-72" /> : error || !data ? (
+        <ErrorState title="Měsíční report se nepodařilo načíst" message={error ?? undefined} onRetry={refetch} />
+      ) : (
+        <>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <StatTile icon={FilePlus2} label="Nově založené karty" value={data.newCards} hint="v období" />
+            <StatTile icon={RefreshCw} label="Aktualizované karty" value={data.updatedCards} hint="v období" />
+            <StatTile icon={FileEdit} label="Nekompletní (drafty)" value={data.incomplete.count} />
+            <StatTile icon={AlertTriangle} label="Karty s quality flagy" value={data.qualityFlagCards} accent />
+          </div>
+
+          <div className="grid gap-6 lg:grid-cols-2">
+            <Card className="border-l-4 border-l-primary">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2"><CalendarClock className="h-5 w-5 text-primary" aria-hidden="true" /> Blížící se tendry</CardTitle>
+                <CardDescription>Termíny v následujících 3 / 6 / 12 měsících.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-3 gap-3">
+                  {(["3", "6", "12"] as const).map((b) => (
+                    <div key={b} className="rounded-lg border p-4 text-center">
+                      <p className="text-xs text-muted-foreground">do {b} měs.</p>
+                      <p className="font-display text-2xl font-bold">{data.tenders[b]}</p>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-l-4 border-l-primary">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2"><ShieldCheck className="h-5 w-5 text-primary" aria-hidden="true" /> Ověření návštěv v období</CardTitle>
+                <CardDescription>Osobní návštěvy podle výsledku GPS a vzdálené doplnění.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2 text-sm">
+                <Row label="Osobní návštěvy" value={data.visits.osobni} />
+                <Row label="— ověřené GPS" value={data.visits.overeno} />
+                <Row label="— mimo místo" value={data.visits.mimo} />
+                <Row label="— neověřené" value={data.visits.neovereno} />
+                <Row label="Vzdáleně doplněné" value={data.visits.vzdalene} />
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2"><FileEdit className="h-5 w-5 text-primary" aria-hidden="true" /> Nekompletní karty</CardTitle>
+              <CardDescription>Drafty a počet chybějících povinných polí (top 10).</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {data.incomplete.items.length === 0 ? (
+                <p className="py-6 text-center text-sm text-muted-foreground">Žádné nekompletní karty. Pěkná práce.</p>
+              ) : (
+                <Table>
+                  <TableHeader><TableRow><TableHead>Firma</TableHead><TableHead>Segment</TableHead><TableHead>Obchodník</TableHead><TableHead>Chybí polí</TableHead></TableRow></TableHeader>
+                  <TableBody>
+                    {data.incomplete.items.map((it) => (
+                      <TableRow key={it.cardId}>
+                        <TableCell className="font-medium">{it.company}</TableCell>
+                        <TableCell><Badge variant="muted">{SEGMENT_LABEL[it.segment] ?? it.segment}</Badge></TableCell>
+                        <TableCell>{it.rep}</TableCell>
+                        <TableCell><Badge variant={it.missing > 0 ? "warn" : "ok"}>{it.missing}</Badge></TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </>
+      )}
     </div>
   );
 }

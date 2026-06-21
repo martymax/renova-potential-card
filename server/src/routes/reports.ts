@@ -108,6 +108,67 @@ reportsRouter.get("/field-activity", (_req, res) => {
   res.json({ byGps, byMethod, offsite });
 });
 
+// Měsíční manažerský report (§10.6)
+reportsRouter.get("/monthly", (req, res) => {
+  const cards = getDb().cards;
+  const now = new Date();
+  const monthParam = String(req.query.month ?? "");
+  const m = /^\d{4}-\d{2}$/.test(monthParam)
+    ? { y: Number(monthParam.slice(0, 4)), mo: Number(monthParam.slice(5, 7)) - 1 }
+    : { y: now.getUTCFullYear(), mo: now.getUTCMonth() };
+  const from = new Date(Date.UTC(m.y, m.mo, 1));
+  const to = new Date(Date.UTC(m.y, m.mo + 1, 1));
+  const inPeriod = (iso: string) => {
+    const t = new Date(iso).getTime();
+    return t >= from.getTime() && t < to.getTime();
+  };
+
+  const newCards = cards.filter((c) => inPeriod(c.createdAt));
+  const updatedCards = cards.filter((c) => inPeriod(c.updatedAt));
+
+  // Nekompletní karty (drafty) + počet chybějících povinných polí
+  const incomplete = cards
+    .filter((c) => c.status === "draft")
+    .map((c) => ({ cardId: c.id, company: c.companyName, segment: c.segment, rep: c.createdByName, missing: c.missingRequired.length }))
+    .sort((a, b) => b.missing - a.missing);
+
+  // Blížící se tendry 3/6/12 měsíců (od teď)
+  const horizon = (months: number) => now.getTime() + months * 30 * 86_400_000;
+  const tenders = { "3": 0, "6": 0, "12": 0 };
+  for (const c of cards) {
+    if (c.segment !== "vodarny" || !c.values["termin_tendru"]) continue;
+    const t = new Date(String(c.values["termin_tendru"])).getTime();
+    if (t < now.getTime()) continue;
+    if (t <= horizon(3)) tenders["3"] += 1;
+    else if (t <= horizon(6)) tenders["6"] += 1;
+    else if (t <= horizon(12)) tenders["12"] += 1;
+  }
+
+  // Ověření návštěv u karet aktualizovaných v období
+  const visits = { osobni: 0, overeno: 0, neovereno: 0, mimo: 0, vzdalene: 0 };
+  for (const c of updatedCards) {
+    if (c.acquisition === "osobni_navsteva") {
+      visits.osobni += 1;
+      const g = c.gps?.status;
+      if (g === "overeno_v_miste" || g === "overeno_v_toleranci") visits.overeno += 1;
+      else if (g === "mimo_misto") visits.mimo += 1;
+      else visits.neovereno += 1;
+    } else {
+      visits.vzdalene += 1;
+    }
+  }
+
+  res.json({
+    period: { month: `${m.y}-${String(m.mo + 1).padStart(2, "0")}`, from: from.toISOString(), to: to.toISOString() },
+    newCards: newCards.length,
+    updatedCards: updatedCards.length,
+    incomplete: { count: incomplete.length, items: incomplete.slice(0, 10) },
+    qualityFlagCards: cards.filter((c) => c.qualityFlags.length > 0).length,
+    tenders,
+    visits,
+  });
+});
+
 // Obchodní potenciál podle segmentu (§10.5)
 reportsRouter.get("/potential", (_req, res) => {
   const cards = getDb().cards;
