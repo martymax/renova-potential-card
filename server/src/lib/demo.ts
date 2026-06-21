@@ -28,13 +28,14 @@ const SPECS: DemoSpec[] = [
     acquisition: "osobni_navsteva", updatedDaysAgo: 4, sync: true,
     values: {
       typ_zakaznika: "vodarna", pocet_odbernych_mist: 18400,
-      meridla_pouzivana: "Sensus, Itron vodoměry DN15–DN40",
+      meridla_pouzivana: ["Sensus", "Itron"], obvykla_stavebni_delka: ["110 mm", "130 mm"],
       zkusebna: "ČMI – Český metrologický institut",
       spokojenost_dodavatele: "2", cena_dodavatele: "nadprůměrná, smlouva do 2027",
       co_je_trapi: "Vysoká poruchovost odečtů a ruční sběr dat z odlehlých míst.",
       informacni_software: "Helios", zajem_dalkove_odecty: "vysoky",
+      zajem_dalkove_odecty_detail: "Aktivně řeší pilotní projekt LoRaWAN, rozhoduje provozní ředitel, brzdí je rozpočet na 2027.",
       termin_tendru: inDays(55), specifikace_tendru: "Dodávka vodoměrů s dálkovým odečtem na 4 roky.",
-      bytovy_sektor: "Možná spolupráce přes městské bytové domy.",
+      bytovy_sektor: "ano",
     },
   },
   {
@@ -42,7 +43,7 @@ const SPECS: DemoSpec[] = [
     acquisition: "telefonat", updatedDaysAgo: 12,
     values: {
       typ_zakaznika: "obec", pocet_odbernych_mist: 2100,
-      meridla_pouzivana: "starší mechanické vodoměry",
+      meridla_pouzivana: ["Jiné"], meridla_pouzivana_jine: "starší mechanické vodoměry bez výrobce",
       zajem_dalkove_odecty: "stredni", termin_tendru: inDays(160),
       co_je_trapi: "x",
     },
@@ -52,7 +53,7 @@ const SPECS: DemoSpec[] = [
     acquisition: "osobni_navsteva", updatedDaysAgo: 30, sync: true,
     values: {
       typ_zakaznika: "teplarna", pocet_odbernych_mist: 5600,
-      meridla_pouzivana: "měřiče tepla Kamstrup",
+      meridla_pouzivana: ["Kamstrup"], obvykla_stavebni_delka: ["110 mm"],
       zkusebna: "Zkušebna Brno (AMS)", spokojenost_dodavatele: "4",
       co_je_trapi: "Potřebují konsolidovat datové toky z více systémů.",
       informacni_software: "Microsoft Dynamics", zajem_dalkove_odecty: "stredni",
@@ -87,7 +88,7 @@ const SPECS: DemoSpec[] = [
     values: {
       pocet_bytu: 48, pocet_meridel: 192,
       skladba_meridel: "vodoměry SV/TV + indikátory topných nákladů",
-      stavebni_delky: "110 mm, ojediněle 130 mm",
+      stavebni_delky: ["110 mm", "130 mm"],
       foto_meridel: { url: "", name: "meridla_brno.jpg", size: 0 },
       technologie_odectu: "Fixní síť wM-Bus",
       specifika_instalace: "Kolísání tlaku v horních patrech, starší ventily.",
@@ -100,7 +101,7 @@ const SPECS: DemoSpec[] = [
     values: {
       pocet_bytu: 36, pocet_meridel: 144,
       skladba_meridel: "vodoměry SV a TV",
-      stavebni_delky: "80 mm a 110 mm", znacka_meridel: "Apator",
+      stavebni_delky: ["80 mm", "110 mm"], znacka_meridel: "Apator",
       technologie_odectu: "Walk-by / drive-by (rádio)",
       specifika_instalace: "Stáří rozvodů přes 25 let, doporučena výměna stoupaček.",
       posledni_dodavatel: "ista", stari_rozvodu: "26",

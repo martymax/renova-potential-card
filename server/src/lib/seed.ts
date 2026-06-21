@@ -28,6 +28,20 @@ function items(labels: string[]): CodebookItem[] {
 
 export function seed(): DbShape {
   const codebooks: Record<string, CodebookItem[]> = {
+    znacky_meridel: items([
+      "Sensus",
+      "Itron",
+      "Kamstrup",
+      "Diehl Metering",
+      "Maddeo",
+    ]),
+    stavebni_delky: items([
+      "80 mm",
+      "110 mm",
+      "130 mm",
+      "165 mm",
+      "190 mm",
+    ]),
     zkusebny: items([
       "ČMI – Český metrologický institut",
       "Zkušebna Brno (AMS)",

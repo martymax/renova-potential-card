@@ -3,12 +3,17 @@
 
 import type { SegmentDef } from "../types.js";
 
-const SKALA_1_5 = [
-  { value: "1", label: "1 — nejhorší" },
-  { value: "2", label: "2" },
-  { value: "3", label: "3" },
-  { value: "4", label: "4" },
-  { value: "5", label: "5 — nejlepší" },
+const SPOKOJENOST = [
+  { value: "1", label: "1 — velmi nespokojen" },
+  { value: "2", label: "2 — spíše nespokojen" },
+  { value: "3", label: "3 — neutrální" },
+  { value: "4", label: "4 — spíše spokojen" },
+  { value: "5", label: "5 — velmi spokojen" },
+];
+
+const ANO_NE = [
+  { value: "ano", label: "Ano" },
+  { value: "ne", label: "Ne" },
 ];
 
 const ZAJEM = [
@@ -51,18 +56,34 @@ export const SEGMENTS: SegmentDef[] = [
       {
         key: "meridla_pouzivana",
         label: "Měřidla, která aktuálně používají",
-        type: "textarea",
+        type: "multiselect",
         required: true,
-        help: "Podklad pro produktovou a obchodní nabídku.",
+        codebook: "znacky_meridel",
+        multi: true,
+        allowOther: true,
+        reportable: true,
+        help: "Vyber značky z nabídky; pro neobvyklé použij „Jiné“ a dopiš ručně.",
+      },
+      {
+        key: "obvykla_stavebni_delka",
+        label: "Nejčastější stavební délka měřidel",
+        type: "multiselect",
+        required: false,
+        codebook: "stavebni_delky",
+        multi: true,
+        allowOther: true,
+        reportable: true,
+        help: "Přednastavené délky; pro jinou použij „Jiné“.",
       },
       {
         key: "zkusebna",
         label: "Zkušebna, se kterou spolupracují",
-        type: "select",
+        type: "radio",
         required: true,
         codebook: "zkusebny",
+        allowOther: true,
         reportable: true,
-        help: "Číselník spravuje admin.",
+        help: "Vyber zkušebnu; pokud chybí, použij „Jiné“. Číselník spravuje admin.",
       },
       {
         key: "spokojenost_dodavatele",
@@ -71,8 +92,8 @@ export const SEGMENTS: SegmentDef[] = [
         required: false,
         scored: true,
         reportable: true,
-        options: SKALA_1_5,
-        help: "Škála 1–5. Vstup do skóringu (write-back do Raynetu).",
+        options: SPOKOJENOST,
+        help: "Slovní hodnocení 1–5. Vstup do skóringu (write-back do Raynetu).",
       },
       {
         key: "cena_dodavatele",
@@ -109,6 +130,13 @@ export const SEGMENTS: SegmentDef[] = [
         help: "Normalizovaná úroveň zájmu; vstup do skóringu (write-back).",
       },
       {
+        key: "zajem_dalkove_odecty_detail",
+        label: "Zájem o dálkové odečty — podrobnosti",
+        type: "textarea",
+        required: false,
+        help: "Rozepiš kontext: konkrétní potřeby, termíny, kdo rozhoduje, co je brzdí. Důležité pro další postup.",
+      },
+      {
         key: "termin_tendru",
         label: "Termín nejbližšího poptávkového řízení nebo tendru",
         type: "date",
@@ -126,9 +154,11 @@ export const SEGMENTS: SegmentDef[] = [
       {
         key: "bytovy_sektor",
         label: "Možnost spolupráce na bytovém sektoru",
-        type: "textarea",
+        type: "radio",
         required: false,
-        help: "Podklad pro další obchodní příležitosti.",
+        options: ANO_NE,
+        reportable: true,
+        help: "Je u zákazníka potenciál i v bytovém sektoru?",
       },
     ],
   },
@@ -155,8 +185,9 @@ export const SEGMENTS: SegmentDef[] = [
         required: true,
         codebook: "dodavatele_vymen",
         multi: true,
+        allowOther: true,
         reportable: true,
-        help: "Číselník spravuje admin. Možnost více hodnot.",
+        help: "Číselník spravuje admin. Možnost více hodnot; pro neuvedené použij „Jiné“.",
       },
       {
         key: "vyhody_nevyhody",
@@ -235,9 +266,13 @@ export const SEGMENTS: SegmentDef[] = [
       {
         key: "stavebni_delky",
         label: "Stavební délky",
-        type: "textarea",
+        type: "multiselect",
         required: true,
-        help: "Podklad pro technické řešení.",
+        codebook: "stavebni_delky",
+        multi: true,
+        allowOther: true,
+        reportable: true,
+        help: "Vyber z přednastavených délek; pro jinou použij „Jiné“. Podklad pro technické řešení.",
       },
       {
         key: "znacka_meridel",

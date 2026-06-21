@@ -103,6 +103,22 @@ test("draft jde uložit i neúplný; SVJ vyžaduje značku NEBO fotografii", asy
   assert.equal(withMark.data.card.completeness, 100);
 });
 
+test("vodárny: kompletní karta s výběrovými poli (multiselect + radio)", async () => {
+  const token = await tokenFor("obchodnik");
+  const card = (await req("POST", "/api/cards", { token, body: { raynetCompanyId: 1001, segment: "vodarny" } })).data.card;
+  const r = await req("PUT", `/api/cards/${card.id}`, {
+    token, body: { mode: "complete", acquisition: "telefonat", values: {
+      typ_zakaznika: "vodarna", pocet_odbernych_mist: 120,
+      meridla_pouzivana: ["Sensus", "Itron"], zkusebna: "ČMI – Český metrologický institut",
+      co_je_trapi: "Vysoká poruchovost odečtů.", informacni_software: "Helios",
+      zajem_dalkove_odecty: "vysoky", termin_tendru: "2027-01-01",
+    } },
+  });
+  assert.equal(r.status, 200);
+  assert.equal(r.data.card.status, "complete");
+  assert.equal(r.data.card.completeness, 100);
+});
+
 test("quality flag se nastaví u zástupné hodnoty x", async () => {
   const token = await tokenFor("obchodnik");
   const card = await openSvjCard(token);

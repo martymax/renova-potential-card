@@ -21,6 +21,7 @@ export type FieldType =
   | "currency"
   | "date"
   | "select"
+  | "radio"
   | "multiselect"
   | "scale"
   | "file";
@@ -43,6 +44,8 @@ export interface FieldDef {
   /** Klíč číselníku pro select/multiselect spravovaný adminem. */
   codebook?: string;
   multi?: boolean;
+  /** Povolí volbu „Jiné" s ručním dopsáním do pole `${key}_jine`. */
+  allowOther?: boolean;
   /** Vstup do skóringu → strukturované + write-back do Raynetu. */
   scored?: boolean;
   /** Pole, které jde do reportingu / CSV. */

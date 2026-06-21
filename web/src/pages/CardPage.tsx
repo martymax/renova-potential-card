@@ -251,6 +251,7 @@ export function CardPage() {
                         key={field.key}
                         field={field}
                         value={values[field.key]}
+                        otherValue={values[`${field.key}_jine`]}
                         required={isFieldRequired(field, segment, values)}
                         invalid={invalid.has(field.key)}
                         qualityReason={qualityByField.get(field.key)}

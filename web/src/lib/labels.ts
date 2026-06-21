@@ -9,6 +9,8 @@ export const SEGMENT_LABEL: Record<SegmentKey, string> = {
 };
 
 export const CODEBOOK_LABEL: Record<string, string> = {
+  znacky_meridel: "Značky měřidel",
+  stavebni_delky: "Stavební délky",
   zkusebny: "Zkušebny",
   software: "Informační software",
   dodavatele_vymen: "Dodavatelé výměn",

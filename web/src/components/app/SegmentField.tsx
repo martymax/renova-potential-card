@@ -12,9 +12,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AuthedImage } from "@/components/app/AuthedImage";
 import type { CodebookItem, FieldDef, UploadedFile } from "@/lib/types";
 
+const OTHER = "Jiné";
+
 interface Props {
   field: FieldDef;
   value: unknown;
+  /** Hodnota doprovodného pole `${key}_jine` pro volbu „Jiné". */
+  otherValue?: unknown;
   required: boolean;
   invalid?: boolean;
   qualityReason?: string;
@@ -24,16 +28,15 @@ interface Props {
 }
 
 function optionsFor(field: FieldDef, codebooks: Record<string, CodebookItem[]>) {
-  if (field.options) return field.options;
-  if (field.codebook) {
-    return (codebooks[field.codebook] ?? [])
-      .filter((i) => i.active)
-      .map((i) => ({ value: i.label, label: i.label }));
-  }
-  return [];
+  const base = field.options
+    ? field.options
+    : field.codebook
+      ? (codebooks[field.codebook] ?? []).filter((i) => i.active).map((i) => ({ value: i.label, label: i.label }))
+      : [];
+  return field.allowOther ? [...base, { value: OTHER, label: OTHER }] : base;
 }
 
-export function SegmentField({ field, value, required, invalid, qualityReason, codebooks, maxAttachmentMB, onChange }: Props) {
+export function SegmentField({ field, value, otherValue, required, invalid, qualityReason, codebooks, maxAttachmentMB, onChange }: Props) {
   const id = `f_${field.key}`;
   const describedBy: string[] = [];
   if (field.help) describedBy.push(`${id}_help`);
@@ -54,7 +57,7 @@ export function SegmentField({ field, value, required, invalid, qualityReason, c
         ) : null}
       </div>
 
-      <FieldControl id={id} field={field} value={value} invalid={invalid} describedBy={describedBy.join(" ") || undefined}
+      <FieldControl id={id} field={field} value={value} otherValue={otherValue} invalid={invalid} describedBy={describedBy.join(" ") || undefined}
         codebooks={codebooks} maxAttachmentMB={maxAttachmentMB} onChange={onChange} />
 
       {field.help ? <p id={`${id}_help`} className="text-xs text-muted-foreground">{field.help}</p> : null}
@@ -67,9 +70,9 @@ export function SegmentField({ field, value, required, invalid, qualityReason, c
 }
 
 function FieldControl({
-  id, field, value, invalid, describedBy, codebooks, maxAttachmentMB, onChange,
+  id, field, value, otherValue, invalid, describedBy, codebooks, maxAttachmentMB, onChange,
 }: {
-  id: string; field: FieldDef; value: unknown; invalid?: boolean; describedBy?: string;
+  id: string; field: FieldDef; value: unknown; otherValue?: unknown; invalid?: boolean; describedBy?: string;
   codebooks: Record<string, CodebookItem[]>; maxAttachmentMB: number; onChange: (key: string, value: unknown) => void;
 }) {
   const invalidRing = invalid ? "border-destructive focus-visible:ring-destructive" : "";
@@ -108,8 +111,10 @@ function FieldControl({
         </Select>
       );
     }
+    case "radio":
+      return <Radio id={id} describedBy={describedBy} invalid={invalid} field={field} value={(value as string) ?? ""} otherValue={(otherValue as string) ?? ""} codebooks={codebooks} onChange={onChange} />;
     case "multiselect":
-      return <MultiSelect id={id} describedBy={describedBy} invalid={invalid} field={field} value={(value as string[]) ?? []} codebooks={codebooks} onChange={onChange} />;
+      return <MultiSelect id={id} describedBy={describedBy} invalid={invalid} field={field} value={(value as string[]) ?? []} otherValue={(otherValue as string) ?? ""} codebooks={codebooks} onChange={onChange} />;
     case "file":
       return <FileField id={id} describedBy={describedBy} invalid={invalid} field={field} value={value as UploadedFile | null} maxAttachmentMB={maxAttachmentMB} onChange={onChange} />;
     default:
@@ -120,9 +125,30 @@ function FieldControl({
   }
 }
 
-function MultiSelect({ id, describedBy, invalid, field, value, codebooks, onChange }: {
-  id: string; describedBy?: string; invalid?: boolean;
-  field: FieldDef; value: string[]; codebooks: Record<string, CodebookItem[]>; onChange: (key: string, value: unknown) => void;
+function Chip({ active, label, onClick }: { active: boolean; label: string; onClick: () => void }) {
+  return (
+    <button type="button" onClick={onClick} aria-pressed={active}
+      className={cn(
+        "rounded-md border px-3 py-1.5 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+        active ? "border-transparent bg-primary text-primary-foreground" : "border-input bg-background hover:bg-muted",
+      )}>
+      {label}
+    </button>
+  );
+}
+
+function OtherInput({ field, value, describedBy, onChange }: {
+  field: FieldDef; value: string; describedBy?: string; onChange: (key: string, value: unknown) => void;
+}) {
+  return (
+    <Input className="mt-2" aria-describedby={describedBy} placeholder="Dopiš ručně…"
+      value={value} onChange={(e) => onChange(`${field.key}_jine`, e.target.value)} />
+  );
+}
+
+function MultiSelect({ id, describedBy, invalid, field, value, otherValue, codebooks, onChange }: {
+  id: string; describedBy?: string; invalid?: boolean; field: FieldDef; value: string[];
+  otherValue: string; codebooks: Record<string, CodebookItem[]>; onChange: (key: string, value: unknown) => void;
 }) {
   const opts = optionsFor(field, codebooks);
   const toggle = (v: string) => {
@@ -130,21 +156,28 @@ function MultiSelect({ id, describedBy, invalid, field, value, codebooks, onChan
     onChange(field.key, next);
   };
   return (
-    <div id={id} role="group" aria-describedby={describedBy} aria-invalid={invalid || undefined} className="flex flex-wrap gap-2">
-      {opts.map((o) => {
-        const active = value.includes(o.value);
-        return (
-          <button key={o.value} type="button" onClick={() => toggle(o.value)}
-            className={cn(
-              "rounded-md border px-3 py-1.5 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-              active ? "border-transparent bg-primary text-primary-foreground" : "border-input bg-background hover:bg-muted",
-            )}
-            aria-pressed={active}>
-            {o.label}
-          </button>
-        );
-      })}
-      {opts.length === 0 ? <p className="text-sm text-muted-foreground">Číselník je prázdný — doplň ho v administraci.</p> : null}
+    <div>
+      <div id={id} role="group" aria-describedby={describedBy} aria-invalid={invalid || undefined} className="flex flex-wrap gap-2">
+        {opts.map((o) => <Chip key={o.value} active={value.includes(o.value)} label={o.label} onClick={() => toggle(o.value)} />)}
+        {opts.length === 0 ? <p className="text-sm text-muted-foreground">Číselník je prázdný — doplň ho v administraci.</p> : null}
+      </div>
+      {field.allowOther && value.includes(OTHER) ? <OtherInput field={field} value={otherValue} describedBy={describedBy} onChange={onChange} /> : null}
+    </div>
+  );
+}
+
+function Radio({ id, describedBy, invalid, field, value, otherValue, codebooks, onChange }: {
+  id: string; describedBy?: string; invalid?: boolean; field: FieldDef; value: string;
+  otherValue: string; codebooks: Record<string, CodebookItem[]>; onChange: (key: string, value: unknown) => void;
+}) {
+  const opts = optionsFor(field, codebooks);
+  return (
+    <div>
+      <div id={id} role="radiogroup" aria-describedby={describedBy} aria-invalid={invalid || undefined} className="flex flex-wrap gap-2">
+        {opts.map((o) => <Chip key={o.value} active={value === o.value} label={o.label} onClick={() => onChange(field.key, value === o.value ? "" : o.value)} />)}
+        {opts.length === 0 ? <p className="text-sm text-muted-foreground">Číselník je prázdný — doplň ho v administraci.</p> : null}
+      </div>
+      {field.allowOther && value === OTHER ? <OtherInput field={field} value={otherValue} describedBy={describedBy} onChange={onChange} /> : null}
     </div>
   );
 }
