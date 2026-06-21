@@ -110,7 +110,7 @@ test("vodárny: kompletní karta s výběrovými poli (multiselect + radio)", as
     token, body: { mode: "complete", acquisition: "telefonat", values: {
       typ_zakaznika: "vodarna", pocet_odbernych_mist: 120,
       meridla_pouzivana: ["Sensus", "Itron"], zkusebna: "ČMI – Český metrologický institut",
-      co_je_trapi: "Vysoká poruchovost odečtů.", informacni_software: "Helios",
+      co_je_trapi: "Vysoká poruchovost odečtů.", informacni_software: ["Helios"],
       zajem_dalkove_odecty: "vysoky", termin_tendru: "2027-01-01",
     } },
   });

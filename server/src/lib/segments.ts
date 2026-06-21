@@ -112,12 +112,14 @@ export const SEGMENTS: SegmentDef[] = [
       {
         key: "informacni_software",
         label: "Jaký informační software používají",
-        type: "select",
+        type: "multiselect",
         required: true,
         codebook: "software",
+        multi: true,
+        allowOther: true,
         scored: true,
         reportable: true,
-        help: "Důležité pro integrace a dálkové odečty; vstup do skóringu (write-back).",
+        help: "Vyber z nabídky; pro neuvedený použij „Jiné“. Vstup do skóringu (write-back).",
       },
       {
         key: "zajem_dalkove_odecty",

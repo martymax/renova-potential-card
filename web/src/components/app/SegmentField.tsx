@@ -97,8 +97,10 @@ function FieldControl({
         <Input id={id} type="date" aria-describedby={describedBy} value={(value as string)?.slice(0, 10) ?? ""}
           className={cn(invalidRing, "w-fit")} onChange={(e) => onChange(field.key, e.target.value)} />
       );
-    case "select":
-    case "scale": {
+    case "scale":
+      // Škála jako přepínací tlačítka (segmentovaný výběr), ne dropdown.
+      return <Radio id={id} describedBy={describedBy} invalid={invalid} field={field} value={(value as string) ?? ""} otherValue={(otherValue as string) ?? ""} codebooks={codebooks} onChange={onChange} />;
+    case "select": {
       const opts = optionsFor(field, codebooks);
       return (
         <Select value={(value as string) ?? ""} onValueChange={(v) => onChange(field.key, v)}>
