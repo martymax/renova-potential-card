@@ -1,0 +1,142 @@
+/* Display font (self-hosted OFL, EU-bezpečné) — pohání utilitu font-display. */
+@import "@fontsource/fraunces/400.css";
+@import "@fontsource/fraunces/500.css";
+@import "@fontsource/fraunces/600.css";
+@import "@fontsource/fraunces/700.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* =========================================================================
+   Simon Says — DESIGN TOKENS (zdroj pravdy)
+   Firemní barvy přes tokeny: aubergine (primary) · magenta (secondary) · gold (accent).
+   HSL bez hsl() obalu — Tailwind je obaluje v presetu. Needituj ad-hoc.
+   ========================================================================= */
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 260 20% 20%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 260 20% 20%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 260 20% 20%;
+
+    --primary: 260 20% 22%;
+    --primary-foreground: 0 0% 98%;
+
+    --secondary: 333 69% 34%;
+    --secondary-foreground: 0 0% 98%;
+
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+
+    --accent: 43 65% 57%;
+    --accent-foreground: 260 20% 22%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 260 20% 22%;
+
+    --radius: 0.5rem;
+
+    /* Zapnutý display font pro nadpisy (jinak default systémový sans). */
+    --font-display: "Fraunces", Georgia, "Times New Roman", serif;
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 260 20% 8%;
+    --foreground: 0 0% 95%;
+
+    --card: 260 20% 10%;
+    --card-foreground: 0 0% 95%;
+
+    --popover: 260 20% 10%;
+    --popover-foreground: 0 0% 95%;
+
+    --primary: 260 20% 22%;
+    --primary-foreground: 0 0% 98%;
+
+    --secondary: 333 69% 34%;
+    --secondary-foreground: 0 0% 98%;
+
+    --muted: 260 15% 15%;
+    --muted-foreground: 240 5% 64.9%;
+
+    --accent: 43 65% 57%;
+    --accent-foreground: 260 20% 22%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+
+    --sidebar-background: 260 20% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 260 15% 15%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 217.2 32.6% 17.5%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans;
+    line-height: 1.4;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3 {
+    @apply font-bold;
+    line-height: 1.2;
+  }
+
+  /* Dekorativní geometrické animace (pozadí). Respektují reduced-motion. */
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-20px); }
+  }
+  @keyframes rotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+  @keyframes pulse-glow {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 0.85; }
+  }
+
+  .geometric-float { animation: float 6s ease-in-out infinite; }
+  .geometric-rotate { animation: rotate 28s linear infinite; }
+  .geometric-pulse { animation: pulse-glow 5s ease-in-out infinite; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .geometric-float,
+    .geometric-rotate,
+    .geometric-pulse {
+      animation: none;
+    }
+  }
+}

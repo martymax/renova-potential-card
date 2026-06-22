@@ -1,0 +1,232 @@
+import { Router } from "express";
+import { authMiddleware, requireRole } from "../lib/auth.js";
+import { getDb } from "../lib/store.js";
+import { SEGMENTS } from "../lib/segments.js";
+import type { Card } from "../types.js";
+
+export const reportsRouter = Router();
+reportsRouter.use(authMiddleware, requireRole("reditel", "admin"));
+
+function isStale(card: Card): boolean {
+  const days = getDb().settings.stalenessDays;
+  return (Date.now() - new Date(card.updatedAt).getTime()) / 86_400_000 > days;
+}
+
+function num(v: unknown): number {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+}
+
+const SEGMENT_LABEL: Record<string, string> = Object.fromEntries(SEGMENTS.map((s) => [s.key, s.label]));
+
+// Souhrnný report (§10.1, §10.3, §10.4)
+reportsRouter.get("/overview", (_req, res) => {
+  const db = getDb();
+  const cards = db.cards;
+
+  const bySegment = SEGMENTS.map((s) => {
+    const seg = cards.filter((c) => c.segment === s.key);
+    const complete = seg.filter((c) => c.status === "complete").length;
+    const avg = seg.length ? Math.round(seg.reduce((a, c) => a + c.completeness, 0) / seg.length) : 0;
+    return {
+      segment: s.key,
+      label: s.label,
+      total: seg.length,
+      complete,
+      drafts: seg.length - complete,
+      avgCompleteness: avg,
+    };
+  });
+
+  const byRep = Object.values(
+    cards.reduce<Record<string, { userId: string; user: string; total: number; complete: number; avg: number; sum: number }>>((acc, c) => {
+      const key = c.createdBy; // stabilní ID, ne jméno (shodná jména by se slila)
+      acc[key] ??= { userId: c.createdBy, user: c.createdByName, total: 0, complete: 0, avg: 0, sum: 0 };
+      acc[key].total += 1;
+      acc[key].sum += c.completeness;
+      if (c.status === "complete") acc[key].complete += 1;
+      return acc;
+    }, {}),
+  ).map((r) => ({ ...r, avg: r.total ? Math.round(r.sum / r.total) : 0 }));
+
+  res.json({
+    totals: {
+      cards: cards.length,
+      complete: cards.filter((c) => c.status === "complete").length,
+      drafts: cards.filter((c) => c.status === "draft").length,
+      stale: cards.filter(isStale).length,
+      withQualityFlags: cards.filter((c) => c.qualityFlags.length > 0).length,
+      qualityFlagCount: cards.reduce((a, c) => a + c.qualityFlags.length, 0),
+    },
+    bySegment,
+    byRep,
+    stalenessDays: db.settings.stalenessDays,
+  });
+});
+
+// Blížící se tendry 3 / 6 / 12 měsíců (§10.6)
+reportsRouter.get("/tenders", (_req, res) => {
+  const now = Date.now();
+  const horizon = (m: number) => now + m * 30 * 86_400_000;
+  const rows = getDb().cards
+    .filter((c) => c.segment === "vodarny" && c.values["termin_tendru"])
+    .map((c) => {
+      const date = new Date(String(c.values["termin_tendru"]));
+      const t = date.getTime();
+      let bucket: "3" | "6" | "12" | "later" | "past" = "later";
+      if (t < now) bucket = "past";
+      else if (t <= horizon(3)) bucket = "3";
+      else if (t <= horizon(6)) bucket = "6";
+      else if (t <= horizon(12)) bucket = "12";
+      return {
+        cardId: c.id,
+        company: c.companyName,
+        date: c.values["termin_tendru"],
+        odbernaMista: num(c.values["pocet_odbernych_mist"]),
+        bucket,
+      };
+    })
+    .filter((r) => r.bucket !== "past" && r.bucket !== "later")
+    .sort((a, b) => String(a.date).localeCompare(String(b.date)));
+  res.json({ tenders: rows });
+});
+
+// Terénní aktivita a GPS ověření (§10.2)
+reportsRouter.get("/field-activity", (_req, res) => {
+  const cards = getDb().cards;
+  const byGps: Record<string, number> = {};
+  const byMethod: Record<string, number> = {};
+  for (const c of cards) {
+    const g = c.gps?.status ?? "neovereno";
+    byGps[g] = (byGps[g] ?? 0) + 1;
+    const m = c.acquisition ?? "interni_doplneni";
+    byMethod[m] = (byMethod[m] ?? 0) + 1;
+  }
+  const offsite = cards
+    .filter((c) => c.gps?.status === "mimo_misto")
+    .map((c) => ({ cardId: c.id, company: c.companyName, rep: c.updatedByName, distanceM: c.gps?.distanceM, at: c.gps?.verifiedAt }));
+  res.json({ byGps, byMethod, offsite });
+});
+
+// Měsíční manažerský report (§10.6)
+reportsRouter.get("/monthly", (req, res) => {
+  const cards = getDb().cards;
+  const now = new Date();
+  const monthParam = String(req.query.month ?? "");
+  const m = /^\d{4}-\d{2}$/.test(monthParam)
+    ? { y: Number(monthParam.slice(0, 4)), mo: Number(monthParam.slice(5, 7)) - 1 }
+    : { y: now.getUTCFullYear(), mo: now.getUTCMonth() };
+  const from = new Date(Date.UTC(m.y, m.mo, 1));
+  const to = new Date(Date.UTC(m.y, m.mo + 1, 1));
+  const inPeriod = (iso: string) => {
+    const t = new Date(iso).getTime();
+    return t >= from.getTime() && t < to.getTime();
+  };
+
+  const newCards = cards.filter((c) => inPeriod(c.createdAt));
+  const updatedCards = cards.filter((c) => inPeriod(c.updatedAt));
+
+  // Nekompletní karty (drafty) + počet chybějících povinných polí
+  const incomplete = cards
+    .filter((c) => c.status === "draft")
+    .map((c) => ({ cardId: c.id, company: c.companyName, segment: c.segment, rep: c.createdByName, missing: c.missingRequired.length }))
+    .sort((a, b) => b.missing - a.missing);
+
+  // Blížící se tendry 3/6/12 měsíců (od teď)
+  const horizon = (months: number) => now.getTime() + months * 30 * 86_400_000;
+  const tenders = { "3": 0, "6": 0, "12": 0 };
+  for (const c of cards) {
+    if (c.segment !== "vodarny" || !c.values["termin_tendru"]) continue;
+    const t = new Date(String(c.values["termin_tendru"])).getTime();
+    if (t < now.getTime()) continue;
+    if (t <= horizon(3)) tenders["3"] += 1;
+    else if (t <= horizon(6)) tenders["6"] += 1;
+    else if (t <= horizon(12)) tenders["12"] += 1;
+  }
+
+  // Ověření návštěv u karet aktualizovaných v období
+  const visits = { osobni: 0, overeno: 0, neovereno: 0, mimo: 0, vzdalene: 0 };
+  for (const c of updatedCards) {
+    if (c.acquisition === "osobni_navsteva") {
+      visits.osobni += 1;
+      const g = c.gps?.status;
+      if (g === "overeno_v_miste" || g === "overeno_v_toleranci") visits.overeno += 1;
+      else if (g === "mimo_misto") visits.mimo += 1;
+      else visits.neovereno += 1;
+    } else {
+      visits.vzdalene += 1;
+    }
+  }
+
+  res.json({
+    period: { month: `${m.y}-${String(m.mo + 1).padStart(2, "0")}`, from: from.toISOString(), to: to.toISOString() },
+    newCards: newCards.length,
+    updatedCards: updatedCards.length,
+    incomplete: { count: incomplete.length, items: incomplete.slice(0, 10) },
+    qualityFlagCards: cards.filter((c) => c.qualityFlags.length > 0).length,
+    tenders,
+    visits,
+  });
+});
+
+// Obchodní potenciál podle segmentu (§10.5)
+reportsRouter.get("/potential", (_req, res) => {
+  const cards = getDb().cards;
+  const v = cards.filter((c) => c.segment === "vodarny");
+  const s = cards.filter((c) => c.segment === "spravce");
+  const j = cards.filter((c) => c.segment === "svj");
+  res.json({
+    vodarny: { karty: v.length, odbernaMista: v.reduce((a, c) => a + num(c.values["pocet_odbernych_mist"]), 0) },
+    spravce: { karty: s.length, spravovaneByty: s.reduce((a, c) => a + num(c.values["pocet_spravovanych_bytu"]), 0) },
+    svj: {
+      karty: j.length,
+      byty: j.reduce((a, c) => a + num(c.values["pocet_bytu"]), 0),
+      meridla: j.reduce((a, c) => a + num(c.values["pocet_meridel"]), 0),
+    },
+  });
+});
+
+// CSV export (§13)
+reportsRouter.get("/export.csv", (_req, res) => {
+  const cards = getDb().cards;
+
+  // Stabilní, popsané sloupce: základ + všechna reportovatelná pole napříč
+  // segmenty (každý sloupec má hlavičku; segment, kam pole nepatří, je prázdný).
+  const baseHeader = ["Firma", "IČO_raynetId", "Segment", "Stav", "Dokončenost_%", "Obchodník", "Aktualizováno", "GPS_status", "Quality_flagy"];
+  const reportableCols = SEGMENTS.flatMap((seg) =>
+    seg.fields.filter((f) => f.reportable).map((f) => ({ segment: seg.key, key: f.key, header: `${f.label} (${seg.label})` })),
+  );
+
+  const lines = [[...baseHeader, ...reportableCols.map((c) => c.header)].map(csvCell).join(";")];
+
+  for (const c of cards) {
+    const row = [
+      c.companyName,
+      String(c.raynetCompanyId),
+      SEGMENT_LABEL[c.segment] ?? c.segment,
+      c.status === "complete" ? "Kompletní" : "Draft",
+      String(c.completeness),
+      c.createdByName,
+      c.updatedAt.slice(0, 10),
+      c.gps?.status ?? "",
+      String(c.qualityFlags.length),
+    ];
+    for (const col of reportableCols) {
+      const v = col.segment === c.segment ? c.values[col.key] : undefined;
+      row.push(Array.isArray(v) ? v.join("|") : v == null ? "" : String(v));
+    }
+    lines.push(row.map(csvCell).join(";"));
+  }
+
+  res.setHeader("Content-Type", "text/csv; charset=utf-8");
+  res.setHeader("Content-Disposition", 'attachment; filename="karty-potencialu.csv"');
+  res.send("﻿" + lines.join("\n")); // BOM kvůli Excelu a diakritice
+});
+
+export function csvCell(v: string): string {
+  // Ochrana proti CSV/formula injection: hodnoty začínající =,+,-,@ (a řídicími
+  // znaky) by tabulkové editory vyhodnotily jako vzorec. Předřadíme apostrof.
+  let s = /^[=+\-@\t\r]/.test(v) ? `'${v}` : v;
+  if (/[;"\n]/.test(s)) s = `"${s.replace(/"/g, '""')}"`;
+  return s;
+}
