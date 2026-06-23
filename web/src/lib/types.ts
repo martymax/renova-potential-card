@@ -15,7 +15,7 @@ export type SegmentKey = "vodarny" | "spravce" | "svj";
 
 export type FieldType =
   | "text" | "textarea" | "number" | "currency"
-  | "date" | "select" | "radio" | "multiselect" | "scale" | "file";
+  | "date" | "select" | "radio" | "multiselect" | "tags" | "scale" | "file";
 
 export interface FieldOption { value: string; label: string }
 
@@ -30,6 +30,7 @@ export interface FieldDef {
   codebook?: string;
   multi?: boolean;
   allowOther?: boolean;
+  learn?: boolean;
   scored?: boolean;
   reportable?: boolean;
   prefillFromRaynet?: string;

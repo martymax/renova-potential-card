@@ -62,10 +62,10 @@ adminRouter.delete("/codebooks/:key/:id", requireRole("admin"), (req, res) => {
     res.status(400).json({ error: "Neplatný klíč číselníku." });
     return;
   }
-  // Soft delete (deaktivace) — historická data v kartách zůstávají platná.
+  // Tvrdé smazání. Historické karty drží hodnotu jako text (label), takže
+  // odebrání položky z číselníku je neporuší — jen zmizí z nabídky.
   mutate((d) => {
-    const item = d.codebooks[key]?.find((i) => i.id === id);
-    if (item) item.active = false;
+    if (d.codebooks[key]) d.codebooks[key] = d.codebooks[key].filter((i) => i.id !== id);
   });
   res.json({ ok: true });
 });

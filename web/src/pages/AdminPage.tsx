@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Plug, ListChecks, ArrowLeftRight, SlidersHorizontal, Plus, Power, RefreshCw, Save, Users } from "lucide-react";
+import { Plug, ListChecks, ArrowLeftRight, SlidersHorizontal, Plus, Power, RefreshCw, Save, Users, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { useResource } from "@/hooks/useResource";
@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -157,7 +158,7 @@ function CodebooksTab() {
                 <CodebookItemRow key={item.id} codeKey={key} item={item} refetch={refetch} />
               ))}
             </ul>
-            <p className="text-xs text-muted-foreground">Název uprav přímo v poli (uloží se po opuštění). Přepínačem položku skryješ, historická data zůstanou.</p>
+            <p className="text-xs text-muted-foreground">Název uprav přímo v poli (uloží se po opuštění). Přepínačem položku skryješ, košem natrvalo smažeš. Historické karty si hodnotu vždy ponechají.</p>
             <div className="flex gap-2">
               <Input value={drafts[key] ?? ""} placeholder="Nová položka…"
                 onChange={(e) => setDrafts((d) => ({ ...d, [key]: e.target.value }))}
@@ -199,6 +200,15 @@ function CodebookItemRow({ codeKey, item, refetch }: { codeKey: string; item: Co
       toast.error(e instanceof Error ? e.message : "Aktualizace položky selhala.");
     }
   }
+  async function remove() {
+    try {
+      await api.del(`/codebooks/${codeKey}/${item.id}`);
+      toast.success("Položka smazána.");
+      refetch();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Smazání selhalo.");
+    }
+  }
 
   return (
     <li className="flex items-center gap-2 rounded-md border p-1.5">
@@ -211,8 +221,27 @@ function CodebookItemRow({ codeKey, item, refetch }: { codeKey: string; item: Co
         onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); if (e.key === "Escape") setLabel(item.label); }}
         className={`h-8 ${item.active ? "" : "text-muted-foreground line-through"}`}
       />
-      <span className="w-14 shrink-0 text-right text-xs text-muted-foreground">{item.active ? "aktivní" : "skrytá"}</span>
-      <Switch checked={item.active} onCheckedChange={toggle} aria-label={`Přepnout ${item.label}`} />
+      <span className="hidden w-12 shrink-0 text-right text-xs text-muted-foreground sm:block">{item.active ? "aktivní" : "skrytá"}</span>
+      <Switch checked={item.active} onCheckedChange={toggle} aria-label={`${item.active ? "Skrýt" : "Zobrazit"} ${item.label}`} />
+      <Dialog>
+        <DialogTrigger asChild>
+          <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive" aria-label={`Smazat ${item.label}`}>
+            <Trash2 className="h-4 w-4" aria-hidden="true" />
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Smazat položku?</DialogTitle>
+            <DialogDescription>
+              „{item.label}“ se odebere z nabídky. Historické karty si hodnotu ponechají. Akci nelze vrátit — položku můžeš místo toho jen skrýt přepínačem.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose asChild><Button variant="outline">Zrušit</Button></DialogClose>
+            <DialogClose asChild><Button variant="destructive" onClick={remove}><Trash2 className="h-4 w-4" aria-hidden="true" /> Smazat</Button></DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </li>
   );
 }

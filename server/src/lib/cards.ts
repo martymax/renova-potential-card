@@ -2,8 +2,31 @@
 
 import { getSegment } from "./segments.js";
 import { completeness, qualityFlags, validateHard } from "./validation.js";
-import type { AuditEntry, Card, FieldMapping, Settings } from "../types.js";
+import type { AuditEntry, Card, CodebookItem, FieldMapping, SegmentDef, Settings } from "../types.js";
 import { genId } from "./store.js";
+
+/**
+ * „Učení" tagů: hodnoty polí typu tags (learn) zadané obchodníkem se přidají do
+ * číselníku jako varianty pro další použití (porovnatelnost), case-insensitive.
+ */
+export function learnTagValues(
+  codebooks: Record<string, CodebookItem[]>,
+  segment: SegmentDef,
+  values: Record<string, unknown>,
+): void {
+  for (const f of segment.fields) {
+    if (f.type !== "tags" || !f.learn || !f.codebook) continue;
+    const v = values[f.key];
+    if (!Array.isArray(v)) continue;
+    const list = (codebooks[f.codebook] ??= []);
+    for (const raw of v) {
+      const label = String(raw).trim();
+      if (label && !list.some((i) => i.label.toLowerCase() === label.toLowerCase())) {
+        list.push({ id: genId("cb_"), label, active: true });
+      }
+    }
+  }
+}
 
 /** Přepočítá odvozená pole karty z aktuálních hodnot. */
 export function recompute(card: Card, settings: Settings): Card {

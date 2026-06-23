@@ -301,6 +301,24 @@ test("CSV export má popsané sloupce a shodný počet sloupců v hlavičce i ř
   for (const r of rows.slice(1)) assert.equal(cols(r), headerCols);
 });
 
+test("tagy se učí — nová hodnota se uloží do číselníku pro další použití", async () => {
+  const token = await tokenFor("obchodnik");
+  const card = (await req("POST", "/api/cards", { token, body: { raynetCompanyId: 2002, segment: "spravce" } })).data.card;
+  const novel = `ENBRA WebService ${Date.now()}`;
+  await req("PUT", `/api/cards/${card.id}`, { token, body: { mode: "draft", values: { system_rozuctovani: ["Techem", novel] } } });
+  const cb = (await req("GET", "/api/codebooks", { token })).data.codebooks.system_rozuctovani;
+  assert.ok(cb.some((i: any) => i.label === novel), "nová hodnota se měla přidat do číselníku");
+});
+
+test("admin smaže položku číselníku natrvalo", async () => {
+  const admin = await tokenFor("admin");
+  const added = await req("POST", "/api/codebooks/zkusebny", { token: admin, body: { label: `Test zkušebna ${Date.now()}` } });
+  const id = added.data.item.id;
+  assert.ok((await req("GET", "/api/codebooks", { token: admin })).data.codebooks.zkusebny.some((i: any) => i.id === id));
+  assert.equal((await req("DELETE", `/api/codebooks/zkusebny/${id}`, { token: admin })).status, 200);
+  assert.ok(!(await req("GET", "/api/codebooks", { token: admin })).data.codebooks.zkusebny.some((i: any) => i.id === id));
+});
+
 test("csvCell neutralizuje vzorce a escapuje oddělovače", () => {
   assert.equal(csvCell("=HYPERLINK(x)"), "'=HYPERLINK(x)");
   assert.equal(csvCell("+1"), "'+1");

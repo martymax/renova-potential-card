@@ -69,7 +69,7 @@ const SPECS: DemoSpec[] = [
       vyhody_nevyhody: "Rychlý servis, ale vyšší cena výměny.",
       prumerna_cena_vymeny: 850,
       podminky_zarazeni: "Doložení referencí a fixace ceny na 3 roky.",
-      system_rozuctovani: "ista", zvyhodneni_nabidek: "Množstevní sleva nad 5000 bytů.",
+      system_rozuctovani: ["ista"], zvyhodneni_nabidek: "Množstevní sleva nad 5000 bytů.",
     },
   },
   {
@@ -79,7 +79,7 @@ const SPECS: DemoSpec[] = [
       pocet_spravovanych_bytu: 3400,
       spolecnosti_vymeny: ["Maddeo"],
       podminky_zarazeni: "nevím",
-      system_rozuctovani: "Techem",
+      system_rozuctovani: ["Techem"],
     },
   },
   {
@@ -90,7 +90,7 @@ const SPECS: DemoSpec[] = [
       skladba_meridel: "vodoměry SV/TV + indikátory topných nákladů",
       stavebni_delky: ["110 mm", "130 mm"],
       foto_meridel: { url: "", name: "meridla_brno.jpg", size: 0 },
-      technologie_odectu: "Fixní síť wM-Bus",
+      technologie_odectu: "wM-Bus",
       specifika_instalace: "Kolísání tlaku v horních patrech, starší ventily.",
       kolisani_vody: "obcasne", funkcnost_ventilu: "castecne",
     },
@@ -101,10 +101,10 @@ const SPECS: DemoSpec[] = [
     values: {
       pocet_bytu: 36, pocet_meridel: 144,
       skladba_meridel: "vodoměry SV a TV",
-      stavebni_delky: ["80 mm", "110 mm"], znacka_meridel: "Apator",
-      technologie_odectu: "Walk-by / drive-by (rádio)",
+      stavebni_delky: ["80 mm", "110 mm"], znacka_meridel: ["Apator"],
+      technologie_odectu: "LoRaWAN",
       specifika_instalace: "Stáří rozvodů přes 25 let, doporučena výměna stoupaček.",
-      posledni_dodavatel: "ista", stari_rozvodu: "26",
+      posledni_dodavatel: "ista Česká republika", stari_rozvodu: "26",
     },
   },
 ];

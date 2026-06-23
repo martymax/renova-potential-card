@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Upload, Paperclip, X, ScanEye } from "lucide-react";
+import { Upload, Paperclip, X, ScanEye, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -117,6 +117,8 @@ function FieldControl({
       return <Radio id={id} describedBy={describedBy} invalid={invalid} field={field} value={(value as string) ?? ""} otherValue={(otherValue as string) ?? ""} codebooks={codebooks} onChange={onChange} />;
     case "multiselect":
       return <MultiSelect id={id} describedBy={describedBy} invalid={invalid} field={field} value={(value as string[]) ?? []} otherValue={(otherValue as string) ?? ""} codebooks={codebooks} onChange={onChange} />;
+    case "tags":
+      return <TagInput id={id} describedBy={describedBy} invalid={invalid} field={field} value={(value as string[]) ?? []} codebooks={codebooks} onChange={onChange} />;
     case "file":
       return <FileField id={id} describedBy={describedBy} invalid={invalid} field={field} value={value as UploadedFile | null} maxAttachmentMB={maxAttachmentMB} onChange={onChange} />;
     default:
@@ -164,6 +166,39 @@ function MultiSelect({ id, describedBy, invalid, field, value, otherValue, codeb
         {opts.length === 0 ? <p className="text-sm text-muted-foreground">Číselník je prázdný — doplň ho v administraci.</p> : null}
       </div>
       {field.allowOther && value.includes(OTHER) ? <OtherInput field={field} value={otherValue} describedBy={describedBy} onChange={onChange} /> : null}
+    </div>
+  );
+}
+
+function TagInput({ id, describedBy, invalid, field, value, codebooks, onChange }: {
+  id: string; describedBy?: string; invalid?: boolean; field: FieldDef; value: string[];
+  codebooks: Record<string, CodebookItem[]>; onChange: (key: string, value: unknown) => void;
+}) {
+  const [draft, setDraft] = useState("");
+  const opts = field.codebook ? (codebooks[field.codebook] ?? []).filter((i) => i.active).map((i) => i.label) : [];
+  const has = (label: string) => value.some((v) => v.toLowerCase() === label.toLowerCase());
+  const all = [...opts, ...value.filter((v) => !opts.some((o) => o.toLowerCase() === v.toLowerCase()))];
+
+  const toggle = (label: string) =>
+    onChange(field.key, has(label) ? value.filter((v) => v.toLowerCase() !== label.toLowerCase()) : [...value, label]);
+  const add = () => {
+    const t = draft.trim();
+    if (t && !has(t)) onChange(field.key, [...value, t]);
+    setDraft("");
+  };
+
+  return (
+    <div>
+      <div id={id} role="group" aria-describedby={describedBy} aria-invalid={invalid || undefined} className="flex flex-wrap gap-2">
+        {all.map((label) => <Chip key={label} active={has(label)} label={label} onClick={() => toggle(label)} />)}
+        {all.length === 0 ? <p className="text-sm text-muted-foreground">Zatím žádné hodnoty — napiš první níže.</p> : null}
+      </div>
+      <div className="mt-2 flex gap-2">
+        <Input value={draft} placeholder="Napiš nový systém a přidej (Enter)…" aria-label={`Přidat hodnotu: ${field.label}`}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }} className="h-9" />
+        <Button type="button" variant="outline" size="icon" aria-label="Přidat hodnotu" onClick={add}><Plus className="h-4 w-4" aria-hidden="true" /></Button>
+      </div>
     </div>
   );
 }

@@ -23,6 +23,7 @@ export type FieldType =
   | "select"
   | "radio"
   | "multiselect"
+  | "tags"
   | "scale"
   | "file";
 
@@ -46,6 +47,8 @@ export interface FieldDef {
   multi?: boolean;
   /** Povolí volbu „Jiné" s ručním dopsáním do pole `${key}_jine`. */
   allowOther?: boolean;
+  /** Pole typu tags: nově zadané hodnoty se uloží do číselníku pro další použití. */
+  learn?: boolean;
   /** Vstup do skóringu → strukturované + write-back do Raynetu. */
   scored?: boolean;
   /** Pole, které jde do reportingu / CSV. */

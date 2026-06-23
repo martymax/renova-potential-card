@@ -34,6 +34,7 @@ export function seed(): DbShape {
       "Kamstrup",
       "Diehl Metering",
       "Maddeo",
+      "Apator",
     ]),
     stavebni_delky: items([
       "80 mm",
@@ -70,11 +71,10 @@ export function seed(): DbShape {
       "Vlastní",
     ]),
     technologie_odectu: items([
-      "Walk-by / drive-by (rádio)",
-      "Fixní síť LoRaWAN",
-      "Fixní síť wM-Bus",
+      "wM-Bus",
+      "M-Bus",
+      "LoRaWAN",
       "NB-IoT",
-      "Mechanická (bez dálkového odečtu)",
     ]),
   };
 

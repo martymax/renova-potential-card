@@ -4,7 +4,7 @@ import { genId, getDb, mutate } from "../lib/store.js";
 import { getSegment } from "../lib/segments.js";
 import { raynetGetCompany, raynetWriteback } from "../lib/raynet.js";
 import { remoteResult, verifyViaBrowser, verifyViaLogbookie } from "../lib/gps.js";
-import { diffAudit, hardErrors, recompute, selectWriteback } from "../lib/cards.js";
+import { diffAudit, hardErrors, learnTagValues, recompute, selectWriteback } from "../lib/cards.js";
 import type { AcquisitionMethod, Card, GpsResult, User } from "../types.js";
 
 export const cardsRouter = Router();
@@ -211,6 +211,9 @@ cardsRouter.put("/:id", (req: AuthedRequest, res) => {
     target.updatedBy = req.user!.id;
     target.updatedByName = req.user!.name;
     recompute(target, d.settings);
+
+    const segDef = getSegment(card.segment);
+    if (segDef) learnTagValues(d.codebooks, segDef, newValues);
 
     d.audit.push(...auditEntries);
     d.audit.push({
