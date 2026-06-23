@@ -144,15 +144,6 @@ function CodebooksTab() {
       toast.error(e instanceof Error ? e.message : "Přidání položky selhalo.");
     }
   }
-  async function toggle(key: string, item: CodebookItem) {
-    try {
-      await api.put(`/codebooks/${key}/${item.id}`, { active: !item.active });
-      refetch();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Aktualizace položky selhala.");
-    }
-  }
-
   return (
     <div className="grid gap-6 md:grid-cols-2">
       {Object.entries(data.codebooks).map(([key, items]) => (
@@ -163,15 +154,10 @@ function CodebooksTab() {
           <CardContent className="space-y-3">
             <ul className="space-y-2">
               {items.map((item) => (
-                <li key={item.id} className="flex items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm">
-                  <span className={item.active ? "" : "text-muted-foreground line-through"}>{item.label}</span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground">{item.active ? "aktivní" : "skrytá"}</span>
-                    <Switch checked={item.active} onCheckedChange={() => toggle(key, item)} aria-label={`Přepnout ${item.label}`} />
-                  </div>
-                </li>
+                <CodebookItemRow key={item.id} codeKey={key} item={item} refetch={refetch} />
               ))}
             </ul>
+            <p className="text-xs text-muted-foreground">Název uprav přímo v poli (uloží se po opuštění). Přepínačem položku skryješ, historická data zůstanou.</p>
             <div className="flex gap-2">
               <Input value={drafts[key] ?? ""} placeholder="Nová položka…"
                 onChange={(e) => setDrafts((d) => ({ ...d, [key]: e.target.value }))}
@@ -182,6 +168,52 @@ function CodebooksTab() {
         </Card>
       ))}
     </div>
+  );
+}
+
+function CodebookItemRow({ codeKey, item, refetch }: { codeKey: string; item: CodebookItem; refetch: () => void }) {
+  const [label, setLabel] = useState(item.label);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => setLabel(item.label), [item.label]);
+
+  async function rename() {
+    const next = label.trim();
+    if (!next || next === item.label) { setLabel(item.label); return; }
+    setBusy(true);
+    try {
+      await api.put(`/codebooks/${codeKey}/${item.id}`, { label: next });
+      toast.success("Položka přejmenována.");
+      refetch();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Přejmenování selhalo.");
+      setLabel(item.label);
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function toggle() {
+    try {
+      await api.put(`/codebooks/${codeKey}/${item.id}`, { active: !item.active });
+      refetch();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Aktualizace položky selhala.");
+    }
+  }
+
+  return (
+    <li className="flex items-center gap-2 rounded-md border p-1.5">
+      <Input
+        value={label}
+        disabled={busy}
+        aria-label={`Název položky ${item.label}`}
+        onChange={(e) => setLabel(e.target.value)}
+        onBlur={rename}
+        onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); if (e.key === "Escape") setLabel(item.label); }}
+        className={`h-8 ${item.active ? "" : "text-muted-foreground line-through"}`}
+      />
+      <span className="w-14 shrink-0 text-right text-xs text-muted-foreground">{item.active ? "aktivní" : "skrytá"}</span>
+      <Switch checked={item.active} onCheckedChange={toggle} aria-label={`Přepnout ${item.label}`} />
+    </li>
   );
 }
 
